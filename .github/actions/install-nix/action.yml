@@ -1,0 +1,34 @@
+name: install Nix
+
+inputs:
+  cachixAuthToken:
+    description: auth token for https://app.cachix.org/cache/rvolosatovs
+
+env:
+  SEGMENT_DOWNLOAD_TIMEOUT_MINS: 1 # abort caching attempt if it's slow
+
+runs:
+  using: composite
+  steps:
+  - run: sudo mkdir -p /nix
+    if: ${{ runner.os == 'Linux' }}
+    shell: bash
+  - run: sudo chown $(whoami) /nix
+    if: ${{ runner.os == 'Linux' }}
+    shell: bash
+  - uses: actions/cache@v3
+    if: ${{ runner.os == 'Linux' }}
+    with:
+      path: /nix
+      key: nix
+  - uses: nixbuild/nix-quick-install-action@v22
+    with:
+      nix_conf: |
+        accept-flake-config = true
+        access-tokens = github.com=${{ github.token }}
+        experimental-features = nix-command flakes
+  - uses: cachix/cachix-action@v12
+    continue-on-error: true
+    with:
+      name: rvolosatovs
+      authToken: '${{ inputs.cachixAuthToken }}'

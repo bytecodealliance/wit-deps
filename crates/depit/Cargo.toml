@@ -1,0 +1,27 @@
+[package]
+name = "depit"
+version = "0.1.0"
+description = "WIT dependency management"
+
+authors.workspace = true
+categories.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+anyhow = { workspace = true, features = ["std"] }
+async-compression = { workspace = true, features = ["futures-io", "gzip"] }
+async-tar = { workspace = true }
+async-trait = { workspace = true }
+directories = { workspace = true }
+futures = { workspace = true, features = ["async-await", "std"] }
+hex = { workspace = true, features = ["alloc"] }
+reqwest = { workspace = true, features = ["rustls-tls", "stream"] }
+serde = { workspace = true, features = ["derive"] }
+sha2 = { workspace = true }
+tokio = { workspace = true, features = ["fs"] }
+tokio-util = { workspace = true, features = ["compat"] }
+toml = { workspace = true, features = ["display", "parse"] }
+tracing = { workspace = true, features = ["attributes"] }
+url = { workspace = true, features = ["serde"] }

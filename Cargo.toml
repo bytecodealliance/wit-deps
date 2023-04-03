@@ -1,0 +1,60 @@
+[package]
+name = "depit-cli"
+version = "0.1.0"
+description = "WIT dependency manager"
+
+authors.workspace = true
+categories.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[workspace.package]
+authors = ["Roman Volosatovs"]
+categories = ["wasm"]
+edition = "2021"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/rvolosatovs/depit"
+
+[badges.maintenance]
+status = "actively-developed"
+
+[dependencies]
+anyhow = { workspace = true, features = ["std"] }
+camino = { workspace = true }
+clap = { workspace = true, features = ["std", "color", "help", "usage", "error-context", "suggestions", "derive"] }
+depit = { workspace = true }
+tokio = { workspace = true, features = ["io-std", "fs", "macros", "rt-multi-thread"] }
+tokio-util = { workspace = true, features = ["compat"] }
+toml = { workspace = true, features = ["display", "parse"] }
+tracing-subscriber = { workspace = true, features = ["ansi", "env-filter", "fmt", "json", "std"] }
+
+[build-dependencies]
+anyhow = { workspace = true, features = ["std"] }
+depit = { workspace = true }
+tokio = { workspace = true, features = ["fs", "macros", "rt-multi-thread"] }
+
+[dev-dependencies]
+wit-bindgen = { workspace = true, features = ["default"] }
+
+[workspace.dependencies]
+anyhow = { version = "1.0.70", default-features = false }
+async-compression = { version = "0.3.15", default-features = false }
+async-tar = { version = "0.4.2", default-features = false }
+async-trait = { version = "0.1.66", default-features = false }
+camino = { version = "1.1.4", default-features = false }
+clap = { version = "4.2.1", default-features = false }
+depit = { path = "./crates/depit" }
+directories = { version = "5.0.0", default-features = false }
+futures = { version = "0.3.28", default-features = false }
+hex = { version = "0.4.3", default-features = false }
+reqwest = { version = "0.11.16", default-features = false }
+serde = { version = "1.0.159", default-features = false }
+sha2 = { version = "0.10.6", default-features = false }
+tokio = { version = "1.26.0", default-features = false }
+tokio-util = { version = "0.7.7", default-features = false }
+toml = { version = "0.7.3", default-features = false }
+tracing = { version = "0.1.37", default-features = false }
+tracing-subscriber = { version = "0.3.16", default-features = false }
+url = { version = "2.3.1", default-features = false }
+wit-bindgen = { version = "0.4.0", default-features = false }

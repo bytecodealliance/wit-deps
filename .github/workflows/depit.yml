@@ -1,0 +1,147 @@
+name: depit
+
+on:
+  pull_request:
+  push:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-linux:
+    strategy:
+      matrix:
+        config:
+        - target: aarch64-unknown-linux-musl
+          test-bin: nix shell --inputs-from . 'nixpkgs#qemu' -c qemu-aarch64 ./result/bin/depit --version
+          test-oci: docker load < ./result
+          # TODO: Run aarch64 binary within OCI
+
+        - target: x86_64-unknown-linux-musl
+          test-bin: ./result/bin/depit --version
+          test-oci: |
+            docker load < ./result
+            docker run --rm depit:$(nix eval --raw .#depit-x86_64-unknown-linux-musl-oci.imageTag) depit --version
+
+    name: depit-${{ matrix.config.target }}
+    runs-on: ubuntu-22.04
+    steps:
+    - uses: actions/checkout@v3
+    - uses: ./.github/actions/install-nix
+      with: 
+        cachixAuthToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+    - uses: ./.github/actions/build-nix
+      with:
+        package: depit-${{ matrix.config.target }}
+        install-path: /bin/depit
+    - run: ${{ matrix.config.test-bin }}
+    - uses: ./.github/actions/build-nix
+      with:
+        package: depit-${{ matrix.config.target }}-oci
+    - run: ${{ matrix.config.test-oci }}
+
+  build-mac:
+    strategy:
+      matrix:
+        config:
+        - target: aarch64-apple-darwin
+          test: file ./result/bin/depit
+          # TODO: Run aarch64 binary on host system and via OCI
+
+        - target: x86_64-apple-darwin
+          test: ./result/bin/depit --version
+
+    name: depit-${{ matrix.config.target }}
+    runs-on: macos-12
+    steps:
+    - uses: actions/checkout@v3
+    - uses: ./.github/actions/install-nix
+      with: 
+        cachixAuthToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+    - uses: ./.github/actions/build-nix
+      with:
+        package: depit-${{ matrix.config.target }}
+        install-path: /bin/depit
+    - run: ${{ matrix.config.test-bin }}
+    - uses: ./.github/actions/build-nix
+      with:
+        package: depit-${{ matrix.config.target }}-oci
+    - run: ${{ matrix.platform.test-oci }}
+    # TODO: Test OCI on Mac
+
+  build-lipo:
+    name: depit-universal-darwin
+    needs: build-mac
+    runs-on: macos-12
+    steps:
+    - uses: actions/download-artifact@v3
+      with:
+        name: depit-aarch64-apple-darwin
+    - uses: actions/download-artifact@v3
+      with:
+        name: depit-x86_64-apple-darwin
+    - run: lipo -create ./depit-aarch64-apple-darwin ./depit-x86_64-apple-darwin -output ./depit-universal-darwin
+    - run: chmod +x ./depit-universal-darwin
+    - run: ./depit-universal-darwin --version
+    - uses: actions/upload-artifact@v3
+      with:
+        name: depit-universal-darwin
+        path: depit-universal-darwin
+
+  cargo:
+    strategy:
+      matrix:
+        check:
+        - fmt
+        - clippy
+        - nextest
+
+    name: cargo ${{ matrix.check }}
+    runs-on: ubuntu-22.04
+    steps:
+    - uses: actions/checkout@v3
+    - uses: ./.github/actions/install-nix
+      with: 
+        cachixAuthToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+    - run: nix build -L .#checks.x86_64-linux.${{ matrix.check }}
+
+  build-doc:
+    runs-on: ubuntu-22.04
+    steps:
+    - uses: actions/checkout@v3
+    - uses: ./.github/actions/install-nix
+      with: 
+        cachixAuthToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+    - run: nix build -L .#checks.x86_64-linux.doc
+    - run: tar xf ./result/target.tar.zst
+    - run: rm -f target/doc/.lock
+    - name: Create `.nojekyll`
+      run: touch target/doc/.nojekyll
+    - name: Write `index.html`
+      run: |
+        cat <<EOF > target/doc/index.html
+          <!DOCTYPE html>
+          <meta charset="utf-8">
+          <title>Redirecting to depit/index.html</title>
+          <meta http-equiv="refresh" content="0; URL=depit/index.html">
+          <link rel="canonical" href="https://${{ github.repository.owner }}.github.io/depit/depit/index.html">
+        EOF
+    - uses: actions/upload-pages-artifact@v1.0.8
+      with:
+        path: target/doc
+
+  deploy-doc:
+    runs-on: ubuntu-22.04
+    needs: build-doc
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    if: ${{ github.ref == 'refs/heads/main' }}
+    steps:
+    - uses: actions/deploy-pages@v2.0.0
+      id: deployment
