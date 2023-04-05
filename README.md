@@ -10,7 +10,7 @@ Example:
 
 ```toml
 # wit/deps.toml
-http = "https://github.com/rvolosatovs/wasi-http/archive/update/wasi-logging.tar.gz"
+http = "https://github.com/WebAssembly/wasi-http/archive/6c6855a7329fb040a48ecdbad1765be8e694416c.tar.gz"
 io = "https://github.com/rvolosatovs/wasi-io/archive/v0.1.0.tar.gz"
 logging = "https://github.com/WebAssembly/wasi-logging/archive/d106e59b25297d0496e6a5d221ad090e19c3aaa3.tar.gz"
 poll = "https://github.com/WebAssembly/wasi-poll/archive/3ff76670b0d43bc7c8a224c2e65880a963416835.tar.gz"
