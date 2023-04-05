@@ -139,6 +139,7 @@ macro_rules! lock {
             include_string!("wit/deps.toml"),
             Some(include_string!("wit/deps.lock")),
             "wit/deps",
+            None,
         )
     };
 }
