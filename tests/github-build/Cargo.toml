@@ -1,0 +1,18 @@
+[package]
+name = "github-build"
+version = "0.0.0"
+description = "github example test"
+
+authors.workspace = true
+categories.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+wit-bindgen = { workspace = true, features = ["default"] }
+
+[build-dependencies]
+anyhow = { workspace = true, features = ["std"] }
+depit = { workspace = true }
+tokio = { workspace = true, features = ["fs", "macros", "rt-multi-thread"] }

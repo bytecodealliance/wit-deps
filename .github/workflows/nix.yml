@@ -35,3 +35,12 @@ jobs:
       with: 
         cachixAuthToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
     - run: nix develop -L --ignore-environment -c cargo tree
+
+  example-github:
+    runs-on: ubuntu-22.04
+    steps:
+    - uses: actions/checkout@v3
+    - uses: ./.github/actions/install-nix
+      with: 
+        cachixAuthToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+    - run: nix build -L .#checks.x86_64-linux.example-github

@@ -136,8 +136,8 @@ pub async fn lock(
 macro_rules! lock {
     () => {
         $crate::lock(
-            include_string!("wit/deps.toml"),
-            Some(include_string!("wit/deps.lock")),
+            include_str!("wit/deps.toml"),
+            Some(include_str!("wit/deps.lock")),
             "wit/deps",
             None,
         )

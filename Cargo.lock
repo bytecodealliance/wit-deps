@@ -411,6 +411,7 @@ dependencies = [
  "camino",
  "clap",
  "depit",
+ "github-build",
  "tokio",
  "tokio-util",
  "toml",
@@ -641,6 +642,16 @@ dependencies = [
  "cfg-if",
  "libc",
  "wasi",
+]
+
+[[package]]
+name = "github-build"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "depit",
+ "tokio",
+ "wit-bindgen",
 ]
 
 [[package]]

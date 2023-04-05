@@ -156,7 +156,13 @@ impl Entry {
                             debug!("`{}` is already up-to-date, skip fetch", out.display());
                             return Ok(LockEntry { url, digest });
                         }
-                        Ok(_) => {}
+                        Ok(digest) => {
+                            debug!(
+                                "`{}` is out-of-date (sha256: {})",
+                                out.display(),
+                                hex::encode(digest.sha256)
+                            );
+                        }
                         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
                             debug!("locked dependency for `{url}` missing");
                         }

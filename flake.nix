@@ -58,9 +58,31 @@
 
         name = "depit";
 
-        build.workspace = true;
+        clippy.allTargets = true;
         clippy.workspace = true;
         test.workspace = true;
+
+        doCheck = false;
+
+        buildOverrides = {pkgs, ...} @ args: {
+          doCheck,
+          preBuild ? "",
+          ...
+        }: let
+          deps.github-build = lib.depit {
+            inherit pkgs;
+
+            lock = ./tests/github-build/wit/deps.lock;
+            manifest = ./tests/github-build/wit/deps.toml;
+          };
+        in
+          optionalAttrs doCheck {
+            preBuild =
+              preBuild
+              + ''
+                ln -s ${deps.github-build} ./tests/github-build/wit/deps
+              '';
+          };
 
         withChecks = {
           checks,
