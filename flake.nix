@@ -143,6 +143,13 @@
         targets.wasm32-wasi = false;
         targets.x86_64-pc-windows-gnu = false;
 
+        build.workspace = true;
+
+        clippy.allTargets = true;
+        clippy.workspace = true;
+
+        doc.packages = ["depit"];
+
         test.workspace = true;
 
         buildOverrides = {
@@ -152,7 +159,7 @@
         } @ args: {
           depsBuildBuild ? [],
           doCheck,
-          preCheck ? "",
+          preBuild ? "",
           ...
         } @ craneArgs:
           with pkgsCross; let
@@ -166,7 +173,7 @@
               // optionalAttrs (doCheck && !(args ? pkgsCross)) {
                 # for native builds, break the recursive dependency cycle by using untested depit to lock deps
                 depit = self.packages.${pkgs.buildPlatform.system}.depit.overrideAttrs (_: {
-                  inherit preCheck;
+                  inherit preBuild;
                   doCheck = false;
                 });
               });
@@ -180,8 +187,8 @@
             }
             # only lock deps in non-dep builds
             // optionalAttrs (doCheck && craneArgs ? cargoArtifacts) {
-              preCheck =
-                preCheck
+              preBuild =
+                preBuild
                 + ''
                   ${lock.github-build}
                 '';
