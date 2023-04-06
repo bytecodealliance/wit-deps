@@ -111,8 +111,8 @@ where
     tar.into_inner().await
 }
 
-/// Given a manifest TOML string and optional lock path, ensures that the path pointed to by
-/// `deps` contains expected contents. This is a potentially destructive operation!
+/// Given a TOML-encoded manifest and optional TOML-encoded lock, ensures that the path pointed to by
+/// `deps` is in sync with the manifest and lock. This is a potentially destructive operation!
 /// Returns a lock if the lock passed to this function was either `None` or out-of-sync.
 ///
 /// # Errors
@@ -155,7 +155,7 @@ pub async fn lock(
     }
 }
 
-/// Like [lock], but reads and writes the lock under path specified in `lock`.
+/// Like [lock](self::lock()), but reads and writes the lock under path specified in `lock`.
 ///
 /// Returns `true` if the lock was updated and `false` otherwise.
 ///
@@ -195,7 +195,7 @@ pub async fn lock_path(
     }
 }
 
-/// Ensure dependency manifest, lock and packages are in sync
+/// Ensure dependency manifest, lock and dependencies are in sync
 #[macro_export]
 macro_rules! lock {
     () => {
