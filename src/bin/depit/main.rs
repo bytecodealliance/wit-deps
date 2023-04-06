@@ -1,11 +1,11 @@
+#![warn(clippy::pedantic)]
+
 use anyhow::Context;
 use camino::{Utf8Path, Utf8PathBuf};
 use clap::{Parser, Subcommand};
 use depit::Identifier;
-use tokio::{
-    fs::{self, File},
-    io,
-};
+use tokio::fs::{self, File};
+use tokio::io;
 use tokio_util::compat::TokioAsyncWriteCompatExt;
 use tracing_subscriber::prelude::*;
 
