@@ -153,8 +153,6 @@
 
         targets.wasm32-wasi = false;
 
-        build.workspace = true;
-
         clippy.allTargets = true;
         clippy.deny = ["warnings"];
         clippy.workspace = true;
