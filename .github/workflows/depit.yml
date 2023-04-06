@@ -15,16 +15,25 @@ jobs:
       matrix:
         config:
         - target: aarch64-unknown-linux-musl
+          install-path: /bin/depit
           test-bin: nix shell --inputs-from . 'nixpkgs#qemu' -c qemu-aarch64 ./result/bin/depit --version
           test-oci: docker load < ./result
           # TODO: Run aarch64 binary within OCI
 
         - target: armv7-unknown-linux-musleabihf
+          install-path: /bin/depit
           test-bin: nix shell --inputs-from . 'nixpkgs#qemu' -c qemu-arm ./result/bin/depit --version
           test-oci: docker load < ./result
           # TODO: Run armv7 binary within OCI
 
+        - target: x86_64-pc-windows-gnu
+          install-path: /bin/depit.exe
+          test-bin: nix shell --inputs-from . 'nixpkgs#wine64' -c wine64 ./result/bin/depit.exe --version
+          test-oci: docker load < ./result
+          # TODO: Run windows binary within OCI
+
         - target: x86_64-unknown-linux-musl
+          install-path: /bin/depit
           test-bin: ./result/bin/depit --version
           test-oci: |
             docker load < ./result
@@ -40,7 +49,7 @@ jobs:
     - uses: ./.github/actions/build-nix
       with:
         package: depit-${{ matrix.config.target }}
-        install-path: /bin/depit
+        install-path: ${{ matrix.config.install-path }}
     - run: ${{ matrix.config.test-bin }}
     - uses: ./.github/actions/build-nix
       with:

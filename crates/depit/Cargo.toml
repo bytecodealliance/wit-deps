@@ -26,3 +26,7 @@ tokio-util = { workspace = true, features = ["compat"] }
 toml = { workspace = true, features = ["display", "parse", "preserve_order"] }
 tracing = { workspace = true, features = ["attributes"] }
 url = { workspace = true, features = ["serde"] }
+
+[target.'cfg(windows)'.dependencies]
+# Required for https://github.com/dignifiedquire/async-tar/pull/35
+async-std = { workspace = true, features = ["unstable"] }
