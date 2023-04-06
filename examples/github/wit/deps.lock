@@ -1,22 +1,22 @@
-[io]
-url = "https://github.com/rvolosatovs/wasi-io/archive/v0.1.0.tar.gz"
-sha256 = "285000cf27a69b4f995ed11b4a0c05e2482e2763727118e2a8e8e89ac588ba0e"
-sha512 = "7539f7317922b56d0b8d8942e171dcc7a2eed5e3c4dfdb903f55f6f0ad394b9d562f038b843d29fafb919a9ed086f0cca44220d179f7a94153bac3c03a72dc33"
-
 [poll]
 url = "https://github.com/WebAssembly/wasi-poll/archive/3ff76670b0d43bc7c8a224c2e65880a963416835.tar.gz"
 sha256 = "8f102a960fe6b90777662e3c5c31e87b0d4572d647b693e981d23d448231b034"
 sha512 = "884810a21708546483f472ac6205dad886691c5d6c21819c60df5fbd96b2fd927906342f53b9274751f1bed0ff20a4186e28ebd031b25399478e222ae0a7e3e8"
+
+[http]
+url = "https://github.com/WebAssembly/wasi-http/archive/6c6855a7329fb040a48ecdbad1765be8e694416c.tar.gz"
+sha256 = "175c28764cd2e8401a3e1c82798689b5f5bcafcc2d5ff3e0c5c4d54ac7388a4a"
+sha512 = "0d1ddb2842ac216d7765eadd4369089b743d0afb3980363cc2fa9b190489cc9afa75e2e120e2801c26067ba5f9d375bc2e547f8cf00d1f0d0305a55c61c42236"
 
 [random]
 url = "https://github.com/WebAssembly/wasi-random/archive/28970c50c3797c0087fa75a15e88bfa39b91e0a0.tar.gz"
 sha256 = "1f90c9122902c412c57a42800e40079df2bc792fafed703a5ce2d4223bb350d4"
 sha512 = "3cf82480746cda6014c8e2b3804f1b539e214c0a2d3c51664429a4cc256733f603b766c66d796f04929d5ddc5c2f406583aa766074bcb0eca18b6493b0560c4f"
 
-[http]
-url = "https://github.com/WebAssembly/wasi-http/archive/6c6855a7329fb040a48ecdbad1765be8e694416c.tar.gz"
-sha256 = "175c28764cd2e8401a3e1c82798689b5f5bcafcc2d5ff3e0c5c4d54ac7388a4a"
-sha512 = "0d1ddb2842ac216d7765eadd4369089b743d0afb3980363cc2fa9b190489cc9afa75e2e120e2801c26067ba5f9d375bc2e547f8cf00d1f0d0305a55c61c42236"
+[io]
+url = "https://github.com/rvolosatovs/wasi-io/archive/v0.1.0.tar.gz"
+sha256 = "285000cf27a69b4f995ed11b4a0c05e2482e2763727118e2a8e8e89ac588ba0e"
+sha512 = "7539f7317922b56d0b8d8942e171dcc7a2eed5e3c4dfdb903f55f6f0ad394b9d562f038b843d29fafb919a9ed086f0cca44220d179f7a94153bac3c03a72dc33"
 
 [logging]
 url = "https://github.com/WebAssembly/wasi-logging/archive/d106e59b25297d0496e6a5d221ad090e19c3aaa3.tar.gz"
