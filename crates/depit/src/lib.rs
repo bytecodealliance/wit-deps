@@ -111,7 +111,7 @@ where
     tar.into_inner().await
 }
 
-/// Given a manifest TOML string and optional lock TOML string, ensures that the path pointed to by
+/// Given a manifest TOML string and optional lock path, ensures that the path pointed to by
 /// `deps` contains expected contents. This is a potentially destructive operation!
 /// Returns a lock if the lock passed to this function was either `None` or out-of-sync.
 ///
@@ -155,13 +155,53 @@ pub async fn lock(
     }
 }
 
+/// Like [lock], but reads and writes the lock under path specified in `lock`.
+///
+/// Returns `true` if the lock was updated and `false` otherwise.
+///
+/// # Errors
+///
+/// Returns an error if anything in the pipeline fails
+pub async fn lock_path(
+    manifest: impl AsRef<str>,
+    lock_path: impl AsRef<Path>,
+    deps: impl AsRef<Path>,
+    packages: impl IntoIterator<Item = &Identifier>,
+) -> anyhow::Result<bool> {
+    let lock_path = lock_path.as_ref();
+    let lock = match fs::read_to_string(&lock_path).await {
+        Ok(lock) => Some(lock),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => None,
+        Err(e) => bail!("failed to read lock at `{}`: {e}", lock_path.display()),
+    };
+    if let Some(lock) = self::lock(manifest, lock, deps, packages)
+        .await
+        .context("failed to lock dependencies")?
+    {
+        if let Some(parent) = lock_path.parent() {
+            fs::create_dir_all(parent).await.with_context(|| {
+                format!(
+                    "failed to create lock parent directory `{}`",
+                    parent.display()
+                )
+            })?;
+        }
+        fs::write(&lock_path, &lock)
+            .await
+            .with_context(|| format!("failed to write lock to `{}`", lock_path.display()))?;
+        Ok(true)
+    } else {
+        Ok(false)
+    }
+}
+
 /// Ensure dependency manifest, lock and packages are in sync
 #[macro_export]
 macro_rules! lock {
     () => {
-        $crate::lock(
+        $crate::lock_path(
             include_str!("wit/deps.toml"),
-            Some(include_str!("wit/deps.lock")),
+            "wit/deps.lock",
             "wit/deps",
             None,
         )

@@ -1,10 +1,10 @@
-use anyhow::{bail, Context};
+use anyhow::Context;
 use camino::{Utf8Path, Utf8PathBuf};
 use clap::{Parser, Subcommand};
 use depit::Identifier;
 use tokio::{
     fs::{self, File},
-    io, join,
+    io,
 };
 use tokio_util::compat::TokioAsyncWriteCompatExt;
 use tracing_subscriber::prelude::*;
@@ -57,32 +57,12 @@ async fn lock(
     let lock_path = lock_path.as_ref();
     let deps_path = deps_path.as_ref();
 
-    let (manifest, lock) = join!(
-        fs::read_to_string(&manifest_path),
-        fs::read_to_string(&lock_path)
-    );
-    let manifest =
-        manifest.with_context(|| format!("failed to read manifest at `{manifest_path}`"))?;
-
-    let lock = match lock {
-        Ok(lock) => Some(lock),
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => None,
-        Err(e) => bail!("failed to read lock at `{lock_path}`: {e}"),
-    };
-
-    if let Some(lock) = depit::lock(manifest, lock, deps_path, packages)
+    let manifest = fs::read_to_string(&manifest_path)
         .await
-        .context("failed to lock dependencies")?
-    {
-        if let Some(parent) = lock_path.parent() {
-            fs::create_dir_all(parent)
-                .await
-                .with_context(|| format!("failed to create lock parent directory `{parent}`"))?;
-        }
-        fs::write(&lock_path, &lock)
-            .await
-            .with_context(|| format!("failed to write lock to `{lock_path}`"))?;
-    }
+        .with_context(|| format!("failed to read manifest at `{manifest_path}`"))?;
+    depit::lock_path(manifest, lock_path, deps_path, packages)
+        .await
+        .context("failed to lock dependencies")?;
     Ok(())
 }
 
