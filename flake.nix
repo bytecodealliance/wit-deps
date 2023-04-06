@@ -170,6 +170,7 @@
           ...
         } @ args: {
           depsBuildBuild ? [],
+          buildInputs ? [],
           doCheck,
           preBuild ? "",
           ...
@@ -193,18 +194,24 @@
             {
               depsBuildBuild =
                 depsBuildBuild
-                ++ optionals stdenv.hostPlatform.isDarwin [
-                  libiconv
-                ];
+                ++ optional stdenv.hostPlatform.isDarwin libiconv;
             }
-            # only lock deps in non-dep builds
-            // optionalAttrs (doCheck && craneArgs ? cargoArtifacts) {
-              preBuild =
-                preBuild
-                + ''
-                  ${lock.github-build}
-                '';
-            };
+            // optionalAttrs (craneArgs ? cargoArtifacts) ({
+                buildInputs =
+                  buildInputs
+                  ++ optionals stdenv.hostPlatform.isDarwin [
+                    pkgs.darwin.apple_sdk.frameworks.Security
+                    pkgs.libiconv
+                  ];
+              }
+              # only lock deps in non-dep builds
+              // optionalAttrs doCheck {
+                preBuild =
+                  preBuild
+                  + ''
+                    ${lock.github-build}
+                  '';
+              });
 
         withChecks = {
           checks,
