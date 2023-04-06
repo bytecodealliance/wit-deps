@@ -19,6 +19,11 @@ jobs:
           test-oci: docker load < ./result
           # TODO: Run aarch64 binary within OCI
 
+        - target: armv7-unknown-linux-musleabihf
+          test-bin: nix shell --inputs-from . 'nixpkgs#qemu' -c qemu-arm ./result/bin/depit --version
+          test-oci: docker load < ./result
+          # TODO: Run armv7 binary within OCI
+
         - target: x86_64-unknown-linux-musl
           test-bin: ./result/bin/depit --version
           test-oci: |
