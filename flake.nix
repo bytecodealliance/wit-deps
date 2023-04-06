@@ -152,7 +152,6 @@
         ];
 
         targets.wasm32-wasi = false;
-        targets.x86_64-pc-windows-gnu = false;
 
         build.workspace = true;
 
@@ -169,8 +168,8 @@
           pkgsCross ? pkgs,
           ...
         } @ args: {
-          depsBuildBuild ? [],
           buildInputs ? [],
+          depsBuildBuild ? [],
           doCheck,
           preBuild ? "",
           ...
@@ -196,22 +195,21 @@
                 depsBuildBuild
                 ++ optional stdenv.hostPlatform.isDarwin libiconv;
             }
-            // optionalAttrs (craneArgs ? cargoArtifacts) ({
-                buildInputs =
-                  buildInputs
-                  ++ optionals stdenv.hostPlatform.isDarwin [
-                    pkgs.darwin.apple_sdk.frameworks.Security
-                    pkgs.libiconv
-                  ];
-              }
+            // optionalAttrs (craneArgs ? cargoArtifacts) {
+              buildInputs =
+                buildInputs
+                ++ optionals stdenv.hostPlatform.isDarwin [
+                  pkgs.darwin.apple_sdk.frameworks.Security
+                  pkgs.libiconv
+                ];
+
               # only lock deps in non-dep builds
-              // optionalAttrs doCheck {
-                preBuild =
-                  preBuild
-                  + ''
-                    ${lock.github-build}
-                  '';
-              });
+              preBuild =
+                preBuild
+                + ''
+                  ${lock.github-build}
+                '';
+            };
 
         withChecks = {
           checks,
