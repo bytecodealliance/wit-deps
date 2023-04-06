@@ -21,6 +21,7 @@ reqwest = { workspace = true, features = ["rustls-tls", "stream"] }
 serde = { workspace = true, features = ["derive"] }
 sha2 = { workspace = true }
 tokio = { workspace = true, features = ["fs"] }
+tokio-stream = { workspace = true, features = ["fs"] }
 tokio-util = { workspace = true, features = ["compat"] }
 toml = { workspace = true, features = ["display", "parse", "preserve_order"] }
 tracing = { workspace = true, features = ["attributes"] }

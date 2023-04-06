@@ -14,6 +14,7 @@ pub use digest::{Digest, Reader as DigestReader, Writer as DigestWriter};
 pub use lock::{Entry as LockEntry, Lock};
 pub use manifest::{Entry as ManifestEntry, Manifest};
 
+use std::collections::BTreeSet;
 use std::ffi::OsStr;
 use std::path::Path;
 
@@ -21,6 +22,7 @@ use anyhow::{bail, Context};
 use directories::ProjectDirs;
 use futures::{AsyncRead, AsyncWrite, TryStreamExt};
 use tokio::fs;
+use tokio_stream::wrappers::ReadDirStream;
 use tracing::debug;
 
 /// WIT dependency identifier
@@ -28,6 +30,13 @@ pub type Identifier = String;
 // TODO: Introduce a rich type with name validation
 //#[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq)]
 //pub struct Identifier(String);
+
+fn is_wit(path: impl AsRef<Path>) -> bool {
+    path.as_ref()
+        .extension()
+        .map(|ext| ext.eq_ignore_ascii_case("wit"))
+        .unwrap_or_default()
+}
 
 /// Unpacks all WIT interfaces found within `wit` subtree of a tar archive read from `tar` to `dst`
 ///
@@ -55,10 +64,7 @@ pub async fn untar(tar: impl AsyncRead + Unpin, dst: impl AsRef<Path>) -> anyhow
             match (path.next(), path.next(), path.next(), path.next()) {
                 (Some(Some("wit")), Some(Some(name)), None, None)
                 | (Some(_), Some(Some("wit")), Some(Some(name)), None)
-                    if Path::new(name)
-                        .extension()
-                        .map(|ext| ext.eq_ignore_ascii_case("wit"))
-                        .unwrap_or_default() =>
+                    if is_wit(name) =>
                 {
                     e.unpack(dst.join(name)).await?;
                     Ok(())
@@ -83,7 +89,25 @@ where
     let path = path.as_ref();
     let mut tar = async_tar::Builder::new(dst);
     tar.mode(async_tar::HeaderMode::Deterministic);
-    tar.append_dir_all("wit", path).await?;
+    let names = fs::read_dir(path)
+        .await
+        .map(ReadDirStream::new)?
+        .try_filter_map(|e| async move {
+            let name = e.file_name();
+            if !is_wit(&name) {
+                return Ok(None);
+            }
+            if e.file_type().await?.is_dir() {
+                return Ok(None);
+            }
+            Ok(Some(name))
+        })
+        .try_collect::<BTreeSet<_>>()
+        .await?;
+    for name in names {
+        tar.append_path_with_name(path.join(&name), Path::new("wit").join(name))
+            .await?;
+    }
     tar.into_inner().await
 }
 

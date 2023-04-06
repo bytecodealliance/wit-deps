@@ -2,7 +2,7 @@ use crate::{tar, Digest, DigestWriter, Identifier};
 
 use core::ops::Deref;
 
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::path::Path;
 
 use anyhow::Context;
@@ -45,10 +45,10 @@ impl Entry {
 
 /// WIT dependency lock mapping [Identifiers](Identifier) to [Entries](Entry)
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
-pub struct Lock(HashMap<Identifier, Entry>);
+pub struct Lock(BTreeMap<Identifier, Entry>);
 
 impl Deref for Lock {
-    type Target = HashMap<Identifier, Entry>;
+    type Target = BTreeMap<Identifier, Entry>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -57,7 +57,7 @@ impl Deref for Lock {
 
 impl FromIterator<(Identifier, Entry)> for Lock {
     fn from_iter<T: IntoIterator<Item = (Identifier, Entry)>>(iter: T) -> Self {
-        Self(HashMap::from_iter(iter))
+        Self(BTreeMap::from_iter(iter))
     }
 }
 
