@@ -1,4 +1,15 @@
 {
+  nixConfig.extra-substituters = [
+    "https://rvolosatovs.cachix.org"
+    "https://nix-community.cachix.org"
+    "https://cache.garnix.io"
+  ];
+  nixConfig.extra-trusted-public-keys = [
+    "rvolosatovs.cachix.org-1:9gRBzsKh+x2HbVVspreFg/6iFRiD4aOcUQfXVDl3hiM="
+    "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
+    "cache.garnix.io:CTFPyKSLcx5RMJKfLo5EEPUObbA78b0YQ2DTCJXqr9g="
+  ];
+
   inputs.nix-log.inputs.nixify.follows = "nixify";
   inputs.nix-log.inputs.nixlib.follows = "nixlib";
   inputs.nix-log.url = github:rvolosatovs/nix-log;
