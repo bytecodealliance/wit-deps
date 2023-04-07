@@ -159,3 +159,74 @@ jobs:
     steps:
     - uses: actions/deploy-pages@v2.0.0
       id: deployment
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/') && github.event_name == 'push'
+    needs: [ build-linux, build-lipo, build-doc ]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/download-artifact@v3
+      with:
+        name: depit-aarch64-apple-darwin
+    - uses: actions/download-artifact@v3
+      with:
+        name: depit-aarch64-apple-darwin-oci
+    - uses: actions/download-artifact@v3
+      with:
+        name: depit-aarch64-unknown-linux-musl
+    - uses: actions/download-artifact@v3
+      with:
+        name: depit-aarch64-unknown-linux-musl-oci
+
+    - uses: actions/download-artifact@v3
+      with:
+        name: depit-armv7-unknown-linux-musleabihf
+    - uses: actions/download-artifact@v3
+      with:
+        name: depit-armv7-unknown-linux-musleabihf-oci
+
+    - uses: actions/download-artifact@v3
+      with:
+        name: depit-universal-darwin
+
+    - uses: actions/download-artifact@v3
+      with:
+        name: depit-x86_64-pc-windows-gnu
+    - uses: actions/download-artifact@v3
+      with:
+        name: depit-x86_64-pc-windows-gnu-oci
+    - uses: actions/download-artifact@v3
+      with:
+        name: depit-x86_64-apple-darwin
+    - uses: actions/download-artifact@v3
+      with:
+        name: depit-x86_64-apple-darwin-oci
+    - uses: actions/download-artifact@v3
+      with:
+        name: depit-x86_64-unknown-linux-musl
+    - uses: actions/download-artifact@v3
+      with:
+        name: depit-x86_64-unknown-linux-musl-oci
+
+    - uses: softprops/action-gh-release@v1
+      with:
+        draft: true
+        prerelease: true
+        generate_release_notes: true
+        files: |
+          depit-aarch64-apple-darwin
+          depit-aarch64-apple-darwin-oci
+          depit-aarch64-unknown-linux-musl
+          depit-aarch64-unknown-linux-musl-oci
+          depit-armv7-unknown-linux-musleabihf
+          depit-armv7-unknown-linux-musleabihf-oci
+          depit-universal-darwin
+          depit-x86_64-apple-darwin
+          depit-x86_64-apple-darwin-oci
+          depit-x86_64-pc-windows-gnu
+          depit-x86_64-pc-windows-gnu-oci
+          depit-x86_64-unknown-linux-musl
+          depit-x86_64-unknown-linux-musl-oci
