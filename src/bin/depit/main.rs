@@ -74,16 +74,16 @@ async fn main() -> anyhow::Result<()> {
     } = Cli::parse();
 
     match command {
-        None => depit::lock_path(manifest_path, lock_path, deps_path, None)
+        None => depit::lock_path(None, manifest_path, lock_path, deps_path, None)
             .await
             .map(|_| ()),
         Some(Command::Lock { package }) => {
-            depit::lock_path(manifest_path, lock_path, deps_path, &package)
+            depit::lock_path(None, manifest_path, lock_path, deps_path, &package)
                 .await
                 .map(|_| ())
         }
         Some(Command::Tar { package, output }) => {
-            depit::lock_path(manifest_path, lock_path, &deps_path, [&package])
+            depit::lock_path(None, manifest_path, lock_path, &deps_path, [&package])
                 .await
                 .map(|_| ())?;
             let package = deps_path.join(package);

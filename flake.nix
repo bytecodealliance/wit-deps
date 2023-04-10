@@ -173,12 +173,12 @@
           ...
         } @ craneArgs:
           with pkgsCross; let
-            lock.github-build = lib.writeLockScript ({
+            lock.build-test = lib.writeLockScript ({
                 inherit pkgs;
 
-                lock = ./tests/github-build/wit/deps.lock;
-                manifest = ./tests/github-build/wit/deps.toml;
-                out = "./tests/github-build/wit/deps";
+                lock = ./tests/build/wit/deps.lock;
+                manifest = ./tests/build/wit/deps.toml;
+                out = "./tests/build/wit/deps";
               }
               // optionalAttrs (doCheck && !(args ? pkgsCross)) {
                 # for native builds, break the recursive dependency cycle by using untested depit to lock deps
@@ -205,7 +205,7 @@
               preBuild =
                 preBuild
                 + ''
-                  ${lock.github-build}
+                  ${lock.build-test}
                 '';
             };
 

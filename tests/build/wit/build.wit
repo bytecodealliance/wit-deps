@@ -1,4 +1,8 @@
-default world github {
+default interface foo {
+    foo: func() -> u32
+}
+
+default world build {
     import http: http.incoming-handler
     import logging: logging.logging
     import random: random.random

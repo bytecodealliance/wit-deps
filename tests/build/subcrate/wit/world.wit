@@ -1,0 +1,3 @@
+default world subcrate {
+    import foo: build.build.foo
+}

@@ -11,22 +11,22 @@ mod manifest;
 
 pub use cache::{Cache, Local as LocalCache};
 pub use digest::{Digest, Reader as DigestReader, Writer as DigestWriter};
-pub use lock::{Entry as LockEntry, Lock};
+pub use lock::{Entry as LockEntry, EntrySource as LockEntrySource, Lock};
 pub use manifest::{Entry as ManifestEntry, Manifest};
 
 pub use futures;
 pub use tokio;
 
 use std::collections::BTreeSet;
-use std::ffi::OsStr;
+use std::ffi::{OsStr, OsString};
 use std::path::Path;
 
 use anyhow::{bail, Context};
 use directories::ProjectDirs;
-use futures::{try_join, AsyncRead, AsyncWrite, FutureExt, TryStreamExt};
+use futures::{try_join, AsyncRead, AsyncWrite, FutureExt, Stream, TryStreamExt};
 use tokio::fs;
 use tokio_stream::wrappers::ReadDirStream;
-use tracing::debug;
+use tracing::{debug, instrument};
 
 /// WIT dependency identifier
 pub type Identifier = String;
@@ -41,11 +41,66 @@ fn is_wit(path: impl AsRef<Path>) -> bool {
         .unwrap_or_default()
 }
 
+/// Returns a stream of WIT file names within a directory at `path`
+#[instrument(level = "trace", skip(path))]
+async fn read_wits(
+    path: impl AsRef<Path>,
+) -> std::io::Result<impl Stream<Item = std::io::Result<OsString>>> {
+    let st = fs::read_dir(path).await.map(ReadDirStream::new)?;
+    Ok(st.try_filter_map(|e| async move {
+        let name = e.file_name();
+        if !is_wit(&name) {
+            return Ok(None);
+        }
+        if e.file_type().await?.is_dir() {
+            return Ok(None);
+        }
+        Ok(Some(name))
+    }))
+}
+
+/// Copies all WIT files from directory at `src` to `dst`
+#[instrument(level = "trace", skip(src, dst))]
+async fn copy_wits(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> std::io::Result<()> {
+    let src = src.as_ref();
+    let dst = dst.as_ref();
+    read_wits(src)
+        .await
+        .map_err(|e| std::io::Error::new(e.kind(), format!("failed to read `{}`", src.display())))?
+        .try_for_each_concurrent(None, |name| async {
+            let src = src.join(&name);
+            let dst = dst.join(name);
+            if let Some(parent) = dst.parent() {
+                fs::create_dir_all(parent).await.map_err(|e| {
+                    std::io::Error::new(
+                        e.kind(),
+                        format!(
+                            "failed to create destination parent directory `{}`: {e}",
+                            parent.display()
+                        ),
+                    )
+                })?;
+            }
+            fs::copy(&src, &dst).await.map(|_| ()).map_err(|e| {
+                std::io::Error::new(
+                    e.kind(),
+                    format!(
+                        "failed to copy `{}` to `{}`: {e}",
+                        src.display(),
+                        dst.display()
+                    ),
+                )
+            })
+        })
+        .await
+}
+
 /// Unpacks all WIT interfaces found within `wit` subtree of a tar archive read from `tar` to `dst`
 ///
 /// # Errors
 ///
 /// Returns and error if the operation fails
+#[instrument(level = "trace", skip(tar, dst))]
 pub async fn untar(tar: impl AsyncRead + Unpin, dst: impl AsRef<Path>) -> anyhow::Result<()> {
     let dst = dst.as_ref();
 
@@ -85,6 +140,7 @@ pub async fn untar(tar: impl AsyncRead + Unpin, dst: impl AsRef<Path>) -> anyhow
 /// # Errors
 ///
 /// Returns and error if the operation fails
+#[instrument(level = "trace", skip(path, dst))]
 pub async fn tar<T>(path: impl AsRef<Path>, dst: T) -> std::io::Result<T>
 where
     T: AsyncWrite + Sync + Send + Unpin,
@@ -92,22 +148,7 @@ where
     let path = path.as_ref();
     let mut tar = async_tar::Builder::new(dst);
     tar.mode(async_tar::HeaderMode::Deterministic);
-    let names = fs::read_dir(path)
-        .await
-        .map(ReadDirStream::new)?
-        .try_filter_map(|e| async move {
-            let name = e.file_name();
-            if !is_wit(&name) {
-                return Ok(None);
-            }
-            if e.file_type().await?.is_dir() {
-                return Ok(None);
-            }
-            Ok(Some(name))
-        })
-        .try_collect::<BTreeSet<_>>()
-        .await?;
-    for name in names {
+    for name in read_wits(path).await?.try_collect::<BTreeSet<_>>().await? {
         tar.append_path_with_name(path.join(&name), Path::new("wit").join(name))
             .await?;
     }
@@ -121,7 +162,9 @@ where
 /// # Errors
 ///
 /// Returns an error if anything in the pipeline fails
+#[instrument(level = "trace", skip(at, manifest, lock, deps, packages))]
 pub async fn lock(
+    at: Option<impl AsRef<Path>>,
     manifest: impl AsRef<str>,
     lock: Option<impl AsRef<str>>,
     deps: impl AsRef<Path>,
@@ -145,7 +188,7 @@ pub async fn lock(
 
     let deps = deps.as_ref();
     let lock = manifest
-        .lock(deps, old_lock.as_ref(), cache.as_ref(), packages)
+        .lock(at, deps, old_lock.as_ref(), cache.as_ref(), packages)
         .await
         .with_context(|| format!("failed to lock deps to `{}`", deps.display()))?;
 
@@ -165,7 +208,9 @@ pub async fn lock(
 /// # Errors
 ///
 /// Returns an error if anything in the pipeline fails
+#[instrument(level = "trace", skip(manifest_path, lock_path, deps, packages))]
 pub async fn lock_path(
+    at: Option<&Path>,
     manifest_path: impl AsRef<Path>,
     lock_path: impl AsRef<Path>,
     deps: impl AsRef<Path>,
@@ -182,7 +227,7 @@ pub async fn lock_path(
             Err(e) => bail!("failed to read lock at `{}`: {e}", lock_path.display()),
         }),
     )?;
-    if let Some(lock) = self::lock(manifest, lock, deps, packages)
+    if let Some(lock) = self::lock(at, manifest, lock, deps, packages)
         .await
         .context("failed to lock dependencies")?
     {
@@ -230,6 +275,7 @@ macro_rules! lock {
                 }
             };
             match $crate::lock(
+                Some($dir),
                 include_str!(concat!($dir, "/deps.toml")),
                 lock,
                 concat!($dir, "/deps"),
@@ -262,6 +308,8 @@ macro_rules! lock_sync {
     ($($args:tt)*) => {
         $crate::tokio::runtime::Builder::new_multi_thread()
             .thread_name("depit/lock_sync")
+            .enable_io()
+            .enable_time()
             .build()?
             .block_on($crate::lock!($($args)*))
     };
