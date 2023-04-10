@@ -203,51 +203,66 @@ pub async fn lock_path(
     }
 }
 
-/// Ensure dependency manifest, lock and dependencies are in sync
+/// Asynchronously ensure dependency manifest, lock and dependencies are in sync.
+/// This must run within a [tokio] context.
 #[macro_export]
 macro_rules! lock {
     () => {
         $crate::lock!("wit")
     };
-    ($dir:literal $(,)?) => {async {
-        use $crate::tokio::fs;
+    ($dir:literal $(,)?) => {
+        async {
+            use $crate::tokio::fs;
 
-        use std::io::{Error, ErrorKind};
+            use std::io::{Error, ErrorKind};
 
-        let lock = match fs::read_to_string(concat!($dir, "/deps.lock")).await {
-            Ok(lock) => Some(lock),
-            Err(e) if e.kind() == ErrorKind::NotFound => None,
-            Err(e) => {
-                return Err(Error::new(
-                    e.kind(),
-                    format!(
-                        "failed to read lock at `{}`: {e}",
-                        concat!($dir, "/deps.lock")
-                    ),
-                ))
-            }
-        };
-        match $crate::lock(
-            include_str!(concat!($dir, "/deps.toml")),
-            lock,
-            concat!($dir, "/deps"),
-            None,
-        )
-        .await
-        {
-            Ok(Some(lock)) => fs::write(concat!($dir, "/deps.lock"), lock)
-                .await
-                .map_err(|e| {
-                    Error::new(
+            let lock = match fs::read_to_string(concat!($dir, "/deps.lock")).await {
+                Ok(lock) => Some(lock),
+                Err(e) if e.kind() == ErrorKind::NotFound => None,
+                Err(e) => {
+                    return Err(Error::new(
                         e.kind(),
                         format!(
-                            "failed to write lock at `{}`: {e}",
+                            "failed to read lock at `{}`: {e}",
                             concat!($dir, "/deps.lock")
                         ),
-                    )
-                }),
-            Ok(None) => Ok(()),
-            Err(e) => Err(Error::new(ErrorKind::Other, e)),
+                    ))
+                }
+            };
+            match $crate::lock(
+                include_str!(concat!($dir, "/deps.toml")),
+                lock,
+                concat!($dir, "/deps"),
+                None,
+            )
+            .await
+            {
+                Ok(Some(lock)) => fs::write(concat!($dir, "/deps.lock"), lock)
+                    .await
+                    .map_err(|e| {
+                        Error::new(
+                            e.kind(),
+                            format!(
+                                "failed to write lock at `{}`: {e}",
+                                concat!($dir, "/deps.lock")
+                            ),
+                        )
+                    }),
+                Ok(None) => Ok(()),
+                Err(e) => Err(Error::new(ErrorKind::Other, e)),
+            }
         }
-    }};
+    };
+}
+
+#[cfg(feature = "sync")]
+/// Synchronously ensure dependency manifest, lock and dependencies are in sync.
+#[macro_export]
+macro_rules! lock_sync {
+    ($($args:tt)*) => {
+        $crate::tokio::runtime::Builder::new_multi_thread()
+            .thread_name("depit/lock_sync")
+            .build()?
+            .block_on($crate::lock!($($args)*))
+    };
 }

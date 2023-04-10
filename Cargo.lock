@@ -671,7 +671,6 @@ version = "0.0.0"
 dependencies = [
  "anyhow",
  "depit",
- "tokio",
  "wit-bindgen",
 ]
 
