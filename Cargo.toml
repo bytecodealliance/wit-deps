@@ -1,6 +1,6 @@
 [package]
 name = "depit-cli"
-version = "0.1.0"
+version = "0.2.0"
 description = "WIT dependency manager"
 
 authors.workspace = true
@@ -41,7 +41,7 @@ async-tar = { version = "0.4", default-features = false }
 async-trait = { version = "0.1", default-features = false }
 camino = { version = "1", default-features = false }
 clap = { version = "4", default-features = false }
-depit = { path = "./crates/depit", version = "0.1" }
+depit = { path = "./crates/depit", version = "0.2" }
 directories = { version = "5", default-features = false }
 futures = { version = "0.3", default-features = false }
 build-test = { path = "./tests/build" }
