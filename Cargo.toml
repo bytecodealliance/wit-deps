@@ -1,6 +1,6 @@
 [package]
 name = "depit-cli"
-version = "0.2.0"
+version = "0.2.1"
 description = "WIT dependency manager"
 
 authors.workspace = true
