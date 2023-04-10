@@ -414,7 +414,7 @@ dependencies = [
 
 [[package]]
 name = "depit"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "async-compression",
@@ -437,7 +437,7 @@ dependencies = [
 
 [[package]]
 name = "depit-cli"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anyhow",
  "build-test",
