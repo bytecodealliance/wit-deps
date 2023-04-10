@@ -15,4 +15,3 @@ wit-bindgen = { workspace = true, features = ["default"] }
 [build-dependencies]
 anyhow = { workspace = true, features = ["std"] }
 depit = { workspace = true }
-tokio = { workspace = true, features = ["fs", "macros", "rt-multi-thread"] }

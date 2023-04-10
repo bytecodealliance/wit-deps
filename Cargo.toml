@@ -29,11 +29,6 @@ tokio-util = { workspace = true, features = ["compat"] }
 toml = { workspace = true, features = ["display", "parse"] }
 tracing-subscriber = { workspace = true, features = ["ansi", "env-filter", "fmt", "json", "std"] }
 
-[build-dependencies]
-anyhow = { workspace = true, features = ["std"] }
-depit = { workspace = true }
-tokio = { workspace = true, features = ["fs", "macros", "rt-multi-thread"] }
-
 [dev-dependencies]
 github-build = { workspace = true }
 wit-bindgen = { workspace = true, features = ["default"] }
