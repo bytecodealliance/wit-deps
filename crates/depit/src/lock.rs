@@ -56,11 +56,11 @@ impl Entry {
     /// # Errors
     ///
     /// Returns an error if [`Self::digest`] of `path` fails
-    pub async fn from_path(path: PathBuf) -> anyhow::Result<Self> {
-        let digest = Self::digest(&path)
+    pub async fn from_path(src: PathBuf, dst: impl AsRef<Path>) -> anyhow::Result<Self> {
+        let digest = Self::digest(dst)
             .await
             .context("failed to compute digest")?;
-        Ok(Self::new(EntrySource::Path(path), digest))
+        Ok(Self::new(EntrySource::Path(src), digest))
     }
 
     /// Compute the digest of an entry from path
