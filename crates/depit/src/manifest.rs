@@ -1,4 +1,6 @@
-use crate::{untar, Cache, Digest, DigestReader, Identifier, Lock, LockEntry};
+use crate::{
+    copy_wits, untar, Cache, Digest, DigestReader, Identifier, Lock, LockEntry, LockEntrySource,
+};
 
 use core::borrow::Borrow;
 use core::convert::identity;
@@ -7,7 +9,8 @@ use core::ops::Deref;
 use core::str::FromStr;
 
 use std::collections::{HashMap, HashSet};
-use std::path::Path;
+use std::convert::Infallible;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use anyhow::{bail, Context as _};
@@ -33,6 +36,9 @@ pub enum Entry {
         /// Optional sha512 digest of this resource
         sha512: Option<[u8; 64]>,
     },
+    /// Dependency specification expressed as a local path to a directory containing WIT
+    /// definitions
+    Path(PathBuf),
     // TODO: Support semver queries
 }
 
@@ -46,11 +52,20 @@ impl From<Url> for Entry {
     }
 }
 
+impl From<PathBuf> for Entry {
+    fn from(path: PathBuf) -> Self {
+        Self::Path(path)
+    }
+}
+
 impl FromStr for Entry {
-    type Err = url::ParseError;
+    type Err = Infallible;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        s.parse::<Url>().map(Into::into)
+        match s.parse().ok().filter(|url: &Url| !url.cannot_be_a_base()) {
+            Some(url) => Ok(Self::from(url)),
+            None => Ok(Self::from(PathBuf::from(s))),
+        }
     }
 }
 
@@ -59,7 +74,7 @@ impl<'de> Deserialize<'de> for Entry {
     where
         D: serde::Deserializer<'de>,
     {
-        const FIELDS: [&str; 3] = ["sha256", "sha512", "url"];
+        const FIELDS: [&str; 4] = ["path", "sha256", "sha512", "url"];
 
         struct Visitor;
         impl<'de> de::Visitor<'de> for Visitor {
@@ -80,11 +95,20 @@ impl<'de> Deserialize<'de> for Entry {
             where
                 V: de::MapAccess<'de>,
             {
-                let mut url = None;
+                let mut path = None;
                 let mut sha256 = None;
                 let mut sha512 = None;
+                let mut url = None;
                 while let Some((k, v)) = map.next_entry::<String, String>()? {
                     match k.as_ref() {
+                        "path" => {
+                            if path.is_some() {
+                                return Err(de::Error::duplicate_field("path"));
+                            }
+                            path = v.parse().map(Some).map_err(|e| {
+                                de::Error::custom(format!("invalid `path` field value: {e}"))
+                            })?;
+                        }
                         "sha256" => {
                             if sha256.is_some() {
                                 return Err(de::Error::duplicate_field("sha256"));
@@ -112,12 +136,18 @@ impl<'de> Deserialize<'de> for Entry {
                         k => return Err(de::Error::unknown_field(k, &FIELDS)),
                     }
                 }
-                let url = url.ok_or_else(|| de::Error::missing_field("url"))?;
-                Ok(Entry::Url {
-                    url,
-                    sha256,
-                    sha512,
-                })
+                match (path, sha256, sha512, url) {
+                    (Some(path), None, None, None) => Ok(Entry::Path(path)),
+                    (None, sha256, sha512, Some(url)) => Ok(Entry::Url {
+                        url,
+                        sha256,
+                        sha512,
+                    }),
+                    (Some(_), None | Some(_), None | Some(_), None) => Err(de::Error::custom(
+                        "`sha256` and `sha512` are not supported in combination with `path`",
+                    )),
+                    _ => Err(de::Error::custom("eiter `url` or `path` must be specified")),
+                }
             }
         }
         deserializer.deserialize_struct("Entry", &FIELDS, Visitor)
@@ -135,9 +165,10 @@ fn source_matches(
 }
 
 impl Entry {
-    #[instrument(level = "trace", skip(out, lock, cache))]
+    #[instrument(level = "trace", skip(at, out, lock, cache))]
     async fn lock(
         self,
+        at: Option<impl AsRef<Path>>,
         out: impl AsRef<Path>,
         lock: Option<&LockEntry>,
         cache: Option<&impl Cache>,
@@ -145,28 +176,41 @@ impl Entry {
         let out = out.as_ref();
 
         match self {
+            Self::Path(path) => {
+                let path = at.map(|at| at.as_ref().join(&path)).unwrap_or(path);
+                copy_wits(&path, out).await?;
+                LockEntry::from_path(path).await
+            }
             Self::Url {
                 url,
                 sha256,
                 sha512,
             } => {
-                if let Some(lock) = lock {
-                    match LockEntry::digest(out).await {
-                        Ok(digest) if digest == lock.digest && url == lock.url => {
+                if let Some(LockEntry {
+                    source,
+                    digest: lock_digest,
+                }) = lock
+                {
+                    match (LockEntry::digest(out).await, source) {
+                        (Ok(digest), LockEntrySource::Url(lock_url))
+                            if digest == *lock_digest && url == *lock_url =>
+                        {
                             debug!("`{}` is already up-to-date, skip fetch", out.display());
-                            return Ok(LockEntry { url, digest });
+                            return Ok(LockEntry::new(LockEntrySource::Url(url), digest));
                         }
-                        Ok(digest) => {
+                        (Ok(digest), _) => {
                             debug!(
                                 "`{}` is out-of-date (sha256: {})",
                                 out.display(),
                                 hex::encode(digest.sha256)
                             );
                         }
-                        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                        (Err(e), _) if e.kind() == std::io::ErrorKind::NotFound => {
                             debug!("locked dependency for `{url}` missing");
                         }
-                        Err(e) => error!("failed to compute dependency digest for `{url}`: {e}"),
+                        (Err(e), _) => {
+                            error!("failed to compute dependency digest for `{url}`: {e}");
+                        }
                     }
                 }
                 let cache = if let Some(cache) = cache {
@@ -178,7 +222,7 @@ impl Entry {
                             match untar(GzipDecoder::new(BufReader::new(&mut hashed)), out).await {
                                 Ok(()) if source_matches(hashed, sha256, sha512) => {
                                     debug!("unpacked `{url}` from cache");
-                                    return LockEntry::new(url, out).await;
+                                    return LockEntry::from_url(url, out).await;
                                 }
                                 Ok(()) => {
                                     warn!("cache hash mismatch for `{url}`");
@@ -245,7 +289,21 @@ impl Entry {
                             .with_context(|| format!("failed to unpack contents of `{url}`"))?;
                         Digest::from(hashed)
                     }
-                    // TODO: Support `file`
+                    "file" => bail!(
+                        r#"`file` scheme is not supported for `url` field, use `path` instead. Try:
+
+```
+mydep = "/path/to/my/dep"
+```
+
+or
+
+```
+[mydep]
+path = "/path/to/my/dep"
+```
+)"#
+                    ),
                     scheme => bail!("unsupported URL scheme `{scheme}`"),
                 };
                 if let Some(sha256) = sha256 {
@@ -276,7 +334,7 @@ expected: {}"#,
                         );
                     }
                 }
-                LockEntry::new(url, out).await
+                LockEntry::from_url(url, out).await
             }
         }
     }
@@ -288,16 +346,18 @@ pub struct Manifest(HashMap<Identifier, Entry>);
 
 impl Manifest {
     /// Lock the manifest populating `deps`
-    #[instrument(level = "trace", skip(deps, lock, cache, packages))]
+    #[instrument(level = "trace", skip(at, deps, lock, cache, packages))]
     pub async fn lock(
         self,
+        at: Option<impl AsRef<Path>>,
         deps: impl AsRef<Path>,
         lock: Option<impl Borrow<Lock>>,
         cache: Option<&impl Cache>,
         packages: impl IntoIterator<Item = &Identifier>,
     ) -> anyhow::Result<Lock> {
-        let lock = lock.as_ref().map(Borrow::borrow);
+        let at = at.as_ref();
         let deps = deps.as_ref();
+        let lock = lock.as_ref().map(Borrow::borrow);
         let packages: HashSet<_> = packages.into_iter().collect();
         if let Some(id) = packages.iter().find(|id| !self.contains_key(**id)) {
             bail!("selected package `{id}` not found in manifest")
@@ -307,7 +367,7 @@ impl Manifest {
                 let out = deps.join(&id);
                 let lock = lock.and_then(|lock| lock.get(&id));
                 let entry = entry
-                    .lock(out, lock, cache)
+                    .lock(at, out, lock, cache)
                     .await
                     .with_context(|| format!("failed to lock `{id}`"))?;
                 Ok((id, entry))
@@ -316,7 +376,7 @@ impl Manifest {
             } else {
                 debug!("locking unselected manifest package `{id}` missing from lock");
                 let entry = entry
-                    .lock(deps.join(&id), None, cache)
+                    .lock(at, deps.join(&id), None, cache)
                     .await
                     .with_context(|| format!("failed to lock `{id}`"))?;
                 Ok((id, entry))
@@ -362,7 +422,7 @@ mod tests {
     const BAZ_SHA512: &str = "ee26b0dd4af7e749aa1a8ee3c10ae9923f618980772e473f8819a5d4940e0db27ac185f8a0e1d5f84f88bc887fd67b143732c304cc5fa9ad8e6f57f50028a8ff";
 
     #[test]
-    fn decode() -> anyhow::Result<()> {
+    fn decode_url() -> anyhow::Result<()> {
         let manifest: Manifest = toml::from_str(&format!(
             r#"
 foo = "{FOO_URL}"
@@ -376,9 +436,11 @@ baz = {{ url = "{BAZ_URL}", sha256 = "{BAZ_SHA256}", sha512 = "{BAZ_SHA512}" }}
             Manifest::from([
                 (
                     "foo".parse().expect("failed to parse `foo` identifier"),
-                    FOO_URL
-                        .parse()
-                        .expect("failed to parse `foo` entry from URL string"),
+                    Entry::Url {
+                        url: FOO_URL.parse().expect("failed to parse `foo` URL string"),
+                        sha256: None,
+                        sha512: None,
+                    },
                 ),
                 (
                     "bar".parse().expect("failed to parse `bar` identifier"),
@@ -402,6 +464,31 @@ baz = {{ url = "{BAZ_URL}", sha256 = "{BAZ_SHA256}", sha512 = "{BAZ_SHA512}" }}
                             .expect("failed to decode `baz` sha512")
                     }
                 )
+            ])
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn decode_path() -> anyhow::Result<()> {
+        let manifest: Manifest = toml::from_str(
+            r#"
+foo = "/path/to/foo"
+bar = { path = "./path/to/bar" }
+"#,
+        )
+        .context("failed to decode manifest")?;
+        assert_eq!(
+            manifest,
+            Manifest::from([
+                (
+                    "foo".parse().expect("failed to parse `foo` identifier"),
+                    Entry::Path(PathBuf::from("/path/to/foo")),
+                ),
+                (
+                    "bar".parse().expect("failed to parse `bar` identifier"),
+                    Entry::Path(PathBuf::from("./path/to/bar")),
+                ),
             ])
         );
         Ok(())

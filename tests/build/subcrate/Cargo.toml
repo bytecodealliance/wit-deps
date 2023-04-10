@@ -1,0 +1,12 @@
+[package]
+name = "subcrate"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+wit-bindgen = { workspace = true, features = ["default"] }
+
+[build-dependencies]
+anyhow = { workspace = true, features = ["std"] }
+depit = { workspace = true }
+tracing-subscriber = { workspace = true, features = ["ansi", "env-filter", "fmt", "json", "std"] }

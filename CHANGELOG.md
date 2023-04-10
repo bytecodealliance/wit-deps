@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Functionality to specify a path to `wit` directory in `lock!`
 - `lock_sync!` macro executing `lock!` in a multi-threaded Tokio context. This macro is guarded by `sync` feature, which is enabled by default
+- Support for path dependencies in `deps.toml`
 
 ## [0.1.0] - 2023-04-07
 

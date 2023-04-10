@@ -3,34 +3,64 @@ use crate::{tar, Digest, DigestWriter, Identifier};
 use core::ops::Deref;
 
 use std::collections::BTreeMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use anyhow::Context;
 use futures::io::sink;
 use serde::{Deserialize, Serialize};
 use url::Url;
 
+/// Source of this dependency
+#[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+pub enum EntrySource {
+    /// URL
+    #[serde(rename = "url")]
+    Url(Url),
+    /// Local path
+    #[serde(rename = "path")]
+    Path(PathBuf),
+}
+
 /// WIT dependency [Lock] entry
 #[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 pub struct Entry {
-    /// Resource URL
-    pub url: Url,
+    /// Resource source
+    #[serde(flatten)]
+    pub source: EntrySource,
     /// Resource digest
     #[serde(flatten)]
     pub digest: Digest,
 }
 
 impl Entry {
-    /// Create a new entry given a url and path containing the unpacked dependency
+    /// Create a new entry given a dependency source and path containing it
+    #[must_use]
+    pub fn new(source: EntrySource, digest: Digest) -> Self {
+        Self { source, digest }
+    }
+
+    /// Create a new entry given a dependency url and path containing the unpacked contents of it
     ///
     /// # Errors
     ///
     /// Returns an error if [`Self::digest`] of `path` fails
-    pub async fn new(url: Url, path: impl AsRef<Path>) -> anyhow::Result<Self> {
+    pub async fn from_url(url: Url, path: impl AsRef<Path>) -> anyhow::Result<Self> {
         let digest = Self::digest(path)
             .await
             .context("failed to compute digest")?;
-        Ok(Self { url, digest })
+        Ok(Self::new(EntrySource::Url(url), digest))
+    }
+
+    /// Create a new entry given a dependency path
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if [`Self::digest`] of `path` fails
+    pub async fn from_path(path: PathBuf) -> anyhow::Result<Self> {
+        let digest = Self::digest(&path)
+            .await
+            .context("failed to compute digest")?;
+        Ok(Self::new(EntrySource::Path(path), digest))
     }
 
     /// Compute the digest of an entry from path
@@ -91,7 +121,9 @@ mod tests {
                 lock == Lock::from([(
                     "foo".parse().expect("failed to `foo` parse identifier"),
                     Entry {
-                        url: FOO_URL.parse().expect("failed to parse `foo` URL"),
+                        source: EntrySource::Url(
+                            FOO_URL.parse().expect("failed to parse `foo` URL")
+                        ),
                         digest: Digest {
                             sha256: FromHex::from_hex(FOO_SHA256)
                                 .expect("failed to decode `foo` sha256"),

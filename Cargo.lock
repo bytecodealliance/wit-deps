@@ -259,6 +259,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "build-test"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "depit",
+ "subcrate",
+ "tracing-subscriber",
+ "wit-bindgen",
+]
+
+[[package]]
 name = "bumpalo"
 version = "3.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -429,10 +440,10 @@ name = "depit-cli"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "build-test",
  "camino",
  "clap",
  "depit",
- "github-build",
  "tokio",
  "tokio-util",
  "toml",
@@ -663,15 +674,6 @@ dependencies = [
  "cfg-if",
  "libc",
  "wasi",
-]
-
-[[package]]
-name = "github-build"
-version = "0.0.0"
-dependencies = [
- "anyhow",
- "depit",
- "wit-bindgen",
 ]
 
 [[package]]
@@ -1370,6 +1372,16 @@ name = "strsim"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "73473c0e59e6d5812c5dfe2a064a6444949f089e20eec9a2e5506596494e4623"
+
+[[package]]
+name = "subcrate"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "depit",
+ "tracing-subscriber",
+ "wit-bindgen",
+]
 
 [[package]]
 name = "syn"
