@@ -177,9 +177,10 @@ impl Entry {
 
         match self {
             Self::Path(path) => {
-                let path = at.map(|at| at.as_ref().join(&path)).unwrap_or(path);
-                copy_wits(&path, out).await?;
-                LockEntry::from_path(path).await
+                let dst = at.map(|at| at.as_ref().join(&path));
+                copy_wits(&dst.as_ref().unwrap_or(&path), out).await?;
+                let digest = LockEntry::digest(dst.as_ref().unwrap_or(&path)).await?;
+                Ok(LockEntry::new(LockEntrySource::Path(path), digest))
             }
             Self::Url {
                 url,
