@@ -1,10 +1,11 @@
 #![warn(clippy::pedantic)]
 
+use std::path::PathBuf;
+
 use anyhow::Context;
-use camino::{Utf8Path, Utf8PathBuf};
 use clap::{Parser, Subcommand};
 use depit::Identifier;
-use tokio::fs::{self, File};
+use tokio::fs::File;
 use tokio::io;
 use tokio_util::compat::TokioAsyncWriteCompatExt;
 use tracing_subscriber::prelude::*;
@@ -14,15 +15,15 @@ use tracing_subscriber::prelude::*;
 struct Cli {
     /// Dependency output directory
     #[arg(short, long, default_value = "wit/deps")]
-    deps: Utf8PathBuf,
+    deps: PathBuf,
 
     /// Dependency manifest path
     #[arg(short, long, default_value = "wit/deps.toml")]
-    manifest: Utf8PathBuf,
+    manifest: PathBuf,
 
     /// Dependency lock path
     #[arg(short, long, default_value = "wit/deps.lock")]
-    lock: Utf8PathBuf,
+    lock: PathBuf,
 
     #[command(subcommand)]
     command: Option<Command>,
@@ -43,27 +44,8 @@ enum Command {
 
         /// Optional output path, if not specified, the archive will be written to stdout
         #[arg(short, long)]
-        output: Option<Utf8PathBuf>,
+        output: Option<PathBuf>,
     },
-}
-
-async fn lock(
-    manifest_path: impl AsRef<Utf8Path>,
-    lock_path: impl AsRef<Utf8Path>,
-    deps_path: impl AsRef<Utf8Path>,
-    packages: impl IntoIterator<Item = &Identifier>,
-) -> anyhow::Result<()> {
-    let manifest_path = manifest_path.as_ref();
-    let lock_path = lock_path.as_ref();
-    let deps_path = deps_path.as_ref();
-
-    let manifest = fs::read_to_string(&manifest_path)
-        .await
-        .with_context(|| format!("failed to read manifest at `{manifest_path}`"))?;
-    depit::lock_path(manifest, lock_path, deps_path, packages)
-        .await
-        .context("failed to lock dependencies")?;
-    Ok(())
 }
 
 #[tokio::main]
@@ -92,17 +74,23 @@ async fn main() -> anyhow::Result<()> {
     } = Cli::parse();
 
     match command {
-        None => lock(manifest_path, lock_path, deps_path, None).await,
+        None => depit::lock_path(manifest_path, lock_path, deps_path, None)
+            .await
+            .map(|_| ()),
         Some(Command::Lock { package }) => {
-            lock(manifest_path, lock_path, deps_path, &package).await
+            depit::lock_path(manifest_path, lock_path, deps_path, &package)
+                .await
+                .map(|_| ())
         }
         Some(Command::Tar { package, output }) => {
-            lock(manifest_path, lock_path, &deps_path, [&package]).await?;
+            depit::lock_path(manifest_path, lock_path, &deps_path, [&package])
+                .await
+                .map(|_| ())?;
             let package = deps_path.join(package);
             if let Some(output) = output {
-                let output = File::create(&output)
-                    .await
-                    .with_context(|| format!("failed to create output path `{output}`"))?;
+                let output = File::create(&output).await.with_context(|| {
+                    format!("failed to create output path `{}`", output.display())
+                })?;
                 depit::tar(package, output.compat_write()).await?;
             } else {
                 depit::tar(package, io::stdout().compat_write()).await?;

@@ -14,13 +14,16 @@ pub use digest::{Digest, Reader as DigestReader, Writer as DigestWriter};
 pub use lock::{Entry as LockEntry, Lock};
 pub use manifest::{Entry as ManifestEntry, Manifest};
 
+pub use futures;
+pub use tokio;
+
 use std::collections::BTreeSet;
 use std::ffi::OsStr;
 use std::path::Path;
 
 use anyhow::{bail, Context};
 use directories::ProjectDirs;
-use futures::{AsyncRead, AsyncWrite, TryStreamExt};
+use futures::{try_join, AsyncRead, AsyncWrite, FutureExt, TryStreamExt};
 use tokio::fs;
 use tokio_stream::wrappers::ReadDirStream;
 use tracing::debug;
@@ -155,7 +158,7 @@ pub async fn lock(
     }
 }
 
-/// Like [lock](self::lock()), but reads and writes the lock under path specified in `lock`.
+/// Like [lock](self::lock()), but reads the manifest at `manifest_path` and reads/writes the lock at `lock_path`.
 ///
 /// Returns `true` if the lock was updated and `false` otherwise.
 ///
@@ -163,17 +166,22 @@ pub async fn lock(
 ///
 /// Returns an error if anything in the pipeline fails
 pub async fn lock_path(
-    manifest: impl AsRef<str>,
+    manifest_path: impl AsRef<Path>,
     lock_path: impl AsRef<Path>,
     deps: impl AsRef<Path>,
     packages: impl IntoIterator<Item = &Identifier>,
 ) -> anyhow::Result<bool> {
+    let manifest_path = manifest_path.as_ref();
     let lock_path = lock_path.as_ref();
-    let lock = match fs::read_to_string(&lock_path).await {
-        Ok(lock) => Some(lock),
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => None,
-        Err(e) => bail!("failed to read lock at `{}`: {e}", lock_path.display()),
-    };
+    let (manifest, lock) = try_join!(
+        fs::read_to_string(&manifest_path).map(|res| res
+            .with_context(|| format!("failed to read manifest at `{}`", manifest_path.display()))),
+        fs::read_to_string(&lock_path).map(|res| match res {
+            Ok(lock) => Ok(Some(lock)),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
+            Err(e) => bail!("failed to read lock at `{}`: {e}", lock_path.display()),
+        }),
+    )?;
     if let Some(lock) = self::lock(manifest, lock, deps, packages)
         .await
         .context("failed to lock dependencies")?
@@ -199,11 +207,47 @@ pub async fn lock_path(
 #[macro_export]
 macro_rules! lock {
     () => {
-        $crate::lock_path(
-            include_str!("wit/deps.toml"),
-            "wit/deps.lock",
-            "wit/deps",
+        $crate::lock!("wit")
+    };
+    ($dir:literal $(,)?) => {async {
+        use $crate::tokio::fs;
+
+        use std::io::{Error, ErrorKind};
+
+        let lock = match fs::read_to_string(concat!($dir, "/deps.lock")).await {
+            Ok(lock) => Some(lock),
+            Err(e) if e.kind() == ErrorKind::NotFound => None,
+            Err(e) => {
+                return Err(Error::new(
+                    e.kind(),
+                    format!(
+                        "failed to read lock at `{}`: {e}",
+                        concat!($dir, "/deps.lock")
+                    ),
+                ))
+            }
+        };
+        match $crate::lock(
+            include_str!(concat!($dir, "/deps.toml")),
+            lock,
+            concat!($dir, "/deps"),
             None,
         )
-    };
+        .await
+        {
+            Ok(Some(lock)) => fs::write(concat!($dir, "/deps.lock"), lock)
+                .await
+                .map_err(|e| {
+                    Error::new(
+                        e.kind(),
+                        format!(
+                            "failed to write lock at `{}`: {e}",
+                            concat!($dir, "/deps.lock")
+                        ),
+                    )
+                }),
+            Ok(None) => Ok(()),
+            Err(e) => Err(Error::new(ErrorKind::Other, e)),
+        }
+    }};
 }
