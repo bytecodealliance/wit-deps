@@ -5,5 +5,4 @@ default interface foo {
 default world build {
     import http: http.incoming-handler
     import logging: logging.logging
-    import random: random.random
 }

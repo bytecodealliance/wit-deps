@@ -1,8 +1,8 @@
 use crate::{tar, Digest, DigestWriter, Identifier};
 
-use core::ops::Deref;
+use core::ops::{Deref, DerefMut};
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
 use anyhow::Context;
@@ -22,21 +22,28 @@ pub enum EntrySource {
 }
 
 /// WIT dependency [Lock] entry
-#[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct Entry {
-    /// Resource source
+    /// Resource source, [None] if the dependency is transitive
     #[serde(flatten)]
-    pub source: EntrySource,
+    pub source: Option<EntrySource>,
     /// Resource digest
     #[serde(flatten)]
     pub digest: Digest,
+    /// Transitive dependency identifiers
+    #[serde(default, skip_serializing_if = "BTreeSet::is_empty")]
+    pub deps: BTreeSet<Identifier>,
 }
 
 impl Entry {
     /// Create a new entry given a dependency source and path containing it
     #[must_use]
-    pub fn new(source: EntrySource, digest: Digest) -> Self {
-        Self { source, digest }
+    pub fn new(source: Option<EntrySource>, digest: Digest, deps: BTreeSet<Identifier>) -> Self {
+        Self {
+            source,
+            digest,
+            deps,
+        }
     }
 
     /// Create a new entry given a dependency url and path containing the unpacked contents of it
@@ -44,11 +51,15 @@ impl Entry {
     /// # Errors
     ///
     /// Returns an error if [`Self::digest`] of `path` fails
-    pub async fn from_url(url: Url, path: impl AsRef<Path>) -> anyhow::Result<Self> {
+    pub async fn from_url(
+        url: Url,
+        path: impl AsRef<Path>,
+        deps: BTreeSet<Identifier>,
+    ) -> anyhow::Result<Self> {
         let digest = Self::digest(path)
             .await
             .context("failed to compute digest")?;
-        Ok(Self::new(EntrySource::Url(url), digest))
+        Ok(Self::new(Some(EntrySource::Url(url)), digest, deps))
     }
 
     /// Create a new entry given a dependency path
@@ -56,11 +67,27 @@ impl Entry {
     /// # Errors
     ///
     /// Returns an error if [`Self::digest`] of `path` fails
-    pub async fn from_path(src: PathBuf, dst: impl AsRef<Path>) -> anyhow::Result<Self> {
+    pub async fn from_path(
+        src: PathBuf,
+        dst: impl AsRef<Path>,
+        deps: BTreeSet<Identifier>,
+    ) -> anyhow::Result<Self> {
         let digest = Self::digest(dst)
             .await
             .context("failed to compute digest")?;
-        Ok(Self::new(EntrySource::Path(src), digest))
+        Ok(Self::new(Some(EntrySource::Path(src)), digest, deps))
+    }
+
+    /// Create a new entry given a transitive dependency path
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if [`Self::digest`] of `path` fails
+    pub async fn from_transitive_path(dst: impl AsRef<Path>) -> anyhow::Result<Self> {
+        let digest = Self::digest(dst)
+            .await
+            .context("failed to compute digest")?;
+        Ok(Self::new(None, digest, BTreeSet::default()))
     }
 
     /// Compute the digest of an entry from path
@@ -82,6 +109,12 @@ impl Deref for Lock {
 
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+impl DerefMut for Lock {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
     }
 }
 
@@ -121,15 +154,16 @@ mod tests {
                 lock == Lock::from([(
                     "foo".parse().expect("failed to `foo` parse identifier"),
                     Entry {
-                        source: EntrySource::Url(
+                        source: Some(EntrySource::Url(
                             FOO_URL.parse().expect("failed to parse `foo` URL")
-                        ),
+                        )),
                         digest: Digest {
                             sha256: FromHex::from_hex(FOO_SHA256)
                                 .expect("failed to decode `foo` sha256"),
                             sha512: FromHex::from_hex(FOO_SHA512)
                                 .expect("failed to decode `foo` sha512"),
                         },
+                        deps: BTreeSet::default(),
                     }
                 )])
             );

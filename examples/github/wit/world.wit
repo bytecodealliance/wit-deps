@@ -1,5 +1,10 @@
 default world github {
+    import clock: clocks.monotonic-clock
     import http: http.incoming-handler
-    import logging: logging.logging
-    import random: random.random
+    import messaging: messaging.consumer
+    import network: sockets.network
+
+    // The interfaces below are incompatible with the rest due to `types` import conflict
+    //import keyvalue: keyvalue.readwrite
+    //import sql: sql.readwrite
 }

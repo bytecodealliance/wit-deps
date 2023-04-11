@@ -32,17 +32,9 @@ struct Cli {
 #[derive(Debug, Subcommand)]
 enum Command {
     /// Lock dependencies
-    Lock {
-        /// Optional list of packages to lock
-        #[arg(short, long)]
-        package: Vec<Identifier>,
-    },
+    Lock,
     /// Update dependencies
-    Update {
-        /// Optional list of packages to update
-        #[arg(short, long)]
-        package: Vec<Identifier>,
-    },
+    Update,
     /// Write a deterministic tar containing the `wit` subdirectory for a package to stdout
     Tar {
         /// Package to archive
@@ -80,21 +72,14 @@ async fn main() -> anyhow::Result<()> {
     } = Cli::parse();
 
     match command {
-        None => wit_deps::lock_path(manifest_path, lock_path, deps_path, None)
+        None | Some(Command::Lock) => wit_deps::lock_path(manifest_path, lock_path, deps_path)
             .await
             .map(|_| ()),
-        Some(Command::Lock { package }) => {
-            wit_deps::lock_path(manifest_path, lock_path, deps_path, &package)
-                .await
-                .map(|_| ())
-        }
-        Some(Command::Update { package }) => {
-            wit_deps::update_path(manifest_path, lock_path, deps_path, &package)
-                .await
-                .map(|_| ())
-        }
+        Some(Command::Update) => wit_deps::update_path(manifest_path, lock_path, deps_path)
+            .await
+            .map(|_| ()),
         Some(Command::Tar { package, output }) => {
-            wit_deps::lock_path(manifest_path, lock_path, &deps_path, [&package])
+            wit_deps::lock_path(manifest_path, lock_path, &deps_path)
                 .await
                 .map(|_| ())?;
             let package = deps_path.join(package);

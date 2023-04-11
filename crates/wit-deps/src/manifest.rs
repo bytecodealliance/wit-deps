@@ -1,17 +1,19 @@
 use crate::{
-    copy_wits, untar, Cache, Digest, DigestReader, Identifier, Lock, LockEntry, LockEntrySource,
+    copy_wits, remove_dir_all, untar, Cache, Digest, DigestReader, Identifier, Lock, LockEntry,
+    LockEntrySource,
 };
 
 use core::convert::identity;
+use core::convert::Infallible;
 use core::fmt;
 use core::ops::Deref;
 use core::str::FromStr;
 
 use std::collections::{HashMap, HashSet};
-use std::convert::Infallible;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use anyhow::ensure;
 use anyhow::{bail, Context as _};
 use async_compression::futures::bufread::GzipDecoder;
 use futures::io::BufReader;
@@ -19,8 +21,7 @@ use futures::lock::Mutex;
 use futures::{stream, AsyncWriteExt, StreamExt, TryStreamExt};
 use hex::FromHex;
 use serde::{de, Deserialize};
-use tokio::fs;
-use tracing::{debug, error, info, instrument, warn};
+use tracing::{debug, error, info, instrument, trace, warn};
 use url::Url;
 
 /// WIT dependency [Manifest] entry
@@ -163,23 +164,51 @@ fn source_matches(
         && sha512.map_or(true, |sha512| sha512 == digest.sha512)
 }
 
+#[instrument(level = "trace", skip(deps))]
+async fn lock_deps(
+    deps: impl IntoIterator<Item = (Identifier, PathBuf)>,
+) -> anyhow::Result<HashMap<Identifier, LockEntry>> {
+    stream::iter(deps.into_iter().map(|(id, path)| async {
+        let entry = LockEntry::from_transitive_path(path).await?;
+        Ok((id, entry))
+    }))
+    .then(identity)
+    .try_collect()
+    .await
+}
+
 impl Entry {
-    #[instrument(level = "trace", skip(at, out, lock, cache))]
+    #[instrument(level = "trace", skip(at, out, lock, cache, skip_deps))]
     async fn lock(
         self,
         at: Option<impl AsRef<Path>>,
         out: impl AsRef<Path>,
         lock: Option<&LockEntry>,
         cache: Option<&impl Cache>,
-    ) -> anyhow::Result<LockEntry> {
+        skip_deps: &HashSet<Identifier>,
+    ) -> anyhow::Result<(LockEntry, HashMap<Identifier, LockEntry>)> {
         let out = out.as_ref();
 
         match self {
             Self::Path(path) => {
                 let dst = at.map(|at| at.as_ref().join(&path));
-                copy_wits(&dst.as_ref().unwrap_or(&path), out).await?;
-                let digest = LockEntry::digest(dst.as_ref().unwrap_or(&path)).await?;
-                Ok(LockEntry::new(LockEntrySource::Path(path), digest))
+                let deps = copy_wits(&dst.as_ref().unwrap_or(&path), out, skip_deps).await?;
+                trace!(?deps, "copied WIT definitions to `{}`", out.display());
+                let deps = lock_deps(deps).await?;
+                trace!(
+                    ?deps,
+                    "locked transitive dependencies of `{}`",
+                    out.display()
+                );
+                let digest = LockEntry::digest(&dst.as_ref().unwrap_or(&path)).await?;
+                Ok((
+                    LockEntry::new(
+                        Some(LockEntrySource::Path(path)),
+                        digest,
+                        deps.keys().cloned().collect(),
+                    ),
+                    deps,
+                ))
             }
             Self::Url {
                 url,
@@ -188,27 +217,50 @@ impl Entry {
             } => {
                 if let Some(LockEntry {
                     source,
-                    digest: lock_digest,
+                    digest: ldigest,
+                    deps: ldeps,
                 }) = lock
                 {
-                    match (LockEntry::digest(out).await, source) {
-                        (Ok(digest), LockEntrySource::Url(lock_url))
-                            if digest == *lock_digest && url == *lock_url =>
+                    let deps = if ldeps.is_empty() {
+                        Ok(HashMap::default())
+                    } else {
+                        let base = out.parent().with_context(|| {
+                            format!("`{}` does not have a parent", out.display())
+                        })?;
+                        lock_deps(ldeps.iter().cloned().map(|id| {
+                            let path = base.join(&id);
+                            (id, path)
+                        }))
+                        .await
+                    };
+                    match (LockEntry::digest(out).await, source, deps) {
+                        (Ok(digest), Some(LockEntrySource::Url(lurl)), Ok(deps))
+                            if digest == *ldigest && url == *lurl =>
                         {
                             debug!("`{}` is already up-to-date, skip fetch", out.display());
-                            return Ok(LockEntry::new(LockEntrySource::Url(url), digest));
+                            // NOTE: Manually deleting transitive dependencies of this
+                            // dependency from `dst` is considered user error
+                            // TODO: Check that transitive dependencies are in sync
+                            return Ok((
+                                LockEntry::new(
+                                    Some(LockEntrySource::Url(url)),
+                                    digest,
+                                    deps.keys().cloned().collect(),
+                                ),
+                                deps,
+                            ));
                         }
-                        (Ok(digest), _) => {
+                        (Ok(digest), _, _) => {
                             debug!(
                                 "`{}` is out-of-date (sha256: {})",
                                 out.display(),
                                 hex::encode(digest.sha256)
                             );
                         }
-                        (Err(e), _) if e.kind() == std::io::ErrorKind::NotFound => {
+                        (Err(e), _, _) if e.kind() == std::io::ErrorKind::NotFound => {
                             debug!("locked dependency for `{url}` missing");
                         }
-                        (Err(e), _) => {
+                        (Err(e), _, _) => {
                             error!("failed to compute dependency digest for `{url}`: {e}");
                         }
                     }
@@ -219,16 +271,30 @@ impl Entry {
                         Ok(None) => debug!("`{url}` not present in cache"),
                         Ok(Some(tar_gz)) => {
                             let mut hashed = DigestReader::from(tar_gz);
-                            match untar(GzipDecoder::new(BufReader::new(&mut hashed)), out).await {
-                                Ok(()) if source_matches(hashed, sha256, sha512) => {
+                            match untar(
+                                GzipDecoder::new(BufReader::new(&mut hashed)),
+                                out,
+                                skip_deps,
+                            )
+                            .await
+                            {
+                                Ok(deps) if source_matches(hashed, sha256, sha512) => {
                                     debug!("unpacked `{url}` from cache");
-                                    return LockEntry::from_url(url, out).await;
+                                    let deps = lock_deps(deps).await?;
+                                    let entry = LockEntry::from_url(
+                                        url,
+                                        out,
+                                        deps.keys().cloned().collect(),
+                                    )
+                                    .await?;
+                                    return Ok((entry, deps));
                                 }
-                                Ok(()) => {
+                                Ok(deps) => {
                                     warn!("cache hash mismatch for `{url}`");
-                                    fs::remove_dir_all(out).await.with_context(|| {
-                                        format!("failed to remove `{}`", out.display())
-                                    })?;
+                                    remove_dir_all(out).await?;
+                                    for (_, dep) in deps {
+                                        remove_dir_all(&dep).await?;
+                                    }
                                 }
                                 Err(e) => {
                                     error!("failed to unpack `{url}` contents from cache: {e}");
@@ -245,7 +311,7 @@ impl Entry {
                     None
                 };
                 let cache = Arc::new(Mutex::new(cache));
-                let digest = match url.scheme() {
+                let (digest, deps) = match url.scheme() {
                     "http" | "https" => {
                         info!("fetch `{url}` into `{}`", out.display());
                         let res = reqwest::get(url.clone())
@@ -284,10 +350,14 @@ impl Entry {
                             })
                             .into_async_read();
                         let mut hashed = DigestReader::from(Box::pin(tar_gz));
-                        untar(GzipDecoder::new(BufReader::new(&mut hashed)), out)
-                            .await
-                            .with_context(|| format!("failed to unpack contents of `{url}`"))?;
-                        Digest::from(hashed)
+                        let deps = untar(
+                            GzipDecoder::new(BufReader::new(&mut hashed)),
+                            out,
+                            skip_deps,
+                        )
+                        .await
+                        .with_context(|| format!("failed to unpack contents of `{url}`"))?;
+                        (Digest::from(hashed), deps)
                     }
                     "file" => bail!(
                         r#"`file` scheme is not supported for `url` field, use `path` instead. Try:
@@ -308,9 +378,7 @@ path = "/path/to/my/dep"
                 };
                 if let Some(sha256) = sha256 {
                     if digest.sha256 != sha256 {
-                        fs::remove_dir_all(out)
-                            .await
-                            .with_context(|| format!("failed to remove `{}`", out.display()))?;
+                        remove_dir_all(out).await?;
                         bail!(
                             r#"sha256 hash mismatch for `{url}`
 got: {}
@@ -322,9 +390,7 @@ expected: {}"#,
                 }
                 if let Some(sha512) = sha512 {
                     if digest.sha512 != sha512 {
-                        fs::remove_dir_all(out)
-                            .await
-                            .with_context(|| format!("failed to remove `{}`", out.display()))?;
+                        remove_dir_all(out).await?;
                         bail!(
                             r#"sha512 hash mismatch for `{url}`
 got: {}
@@ -334,7 +400,11 @@ expected: {}"#,
                         );
                     }
                 }
-                LockEntry::from_url(url, out).await
+                trace!(?deps, "fetched contents of `{url}` to `{}`", out.display());
+                let deps = lock_deps(deps).await?;
+                trace!(?deps, "locked transitive dependencies of `{url}`");
+                let entry = LockEntry::from_url(url, out, deps.keys().cloned().collect()).await?;
+                Ok((entry, deps))
             }
         }
     }
@@ -346,43 +416,59 @@ pub struct Manifest(HashMap<Identifier, Entry>);
 
 impl Manifest {
     /// Lock the manifest populating `deps`
-    #[instrument(level = "trace", skip(at, deps, lock, cache, packages))]
+    #[instrument(level = "trace", skip(at, deps, lock, cache))]
     pub async fn lock(
         self,
         at: Option<impl AsRef<Path>>,
         deps: impl AsRef<Path>,
         lock: Option<&Lock>,
         cache: Option<&impl Cache>,
-        packages: impl IntoIterator<Item = &Identifier>,
     ) -> anyhow::Result<Lock> {
         let at = at.as_ref();
         let deps = deps.as_ref();
-        let packages: HashSet<_> = packages.into_iter().collect();
-        if let Some(id) = packages.iter().find(|id| !self.contains_key(**id)) {
-            bail!("selected package `{id}` not found in manifest")
-        }
+        // Dependency ids, which are pinned in the manifest
+        let pinned = self.0.keys().cloned().collect();
         stream::iter(self.0.into_iter().map(|(id, entry)| async {
-            if packages.is_empty() || packages.contains(&id) {
-                let out = deps.join(&id);
-                let lock = lock.and_then(|lock| lock.get(&id));
-                let entry = entry
-                    .lock(at, out, lock, cache)
-                    .await
-                    .with_context(|| format!("failed to lock `{id}`"))?;
-                Ok((id, entry))
-            } else if let Some(Some(entry)) = lock.map(|lock| lock.get(&id)) {
-                Ok((id, entry.clone()))
-            } else {
-                debug!("locking unselected manifest package `{id}` missing from lock");
-                let entry = entry
-                    .lock(at, deps.join(&id), None, cache)
-                    .await
-                    .with_context(|| format!("failed to lock `{id}`"))?;
-                Ok((id, entry))
-            }
+            let out = deps.join(&id);
+            let lock = lock.and_then(|lock| lock.get(&id));
+            let (entry, deps) = entry
+                .lock(at, out, lock, cache, &pinned)
+                .await
+                .with_context(|| format!("failed to lock `{id}`"))?;
+            Ok(((id, entry), deps))
         }))
         .then(identity)
-        .try_collect()
+        .try_fold(Lock::default(), |mut lock, ((id, entry), deps)| async {
+            use std::collections::btree_map::Entry::{Occupied, Vacant};
+
+            match lock.entry(id) {
+                Occupied(e) => {
+                    error!("duplicate lock entry for direct dependency `{}`", e.key());
+                }
+                Vacant(e) => {
+                    trace!("record lock entry for direct dependency `{}`", e.key());
+                    e.insert(entry);
+                }
+            }
+            for (id, entry) in deps {
+                match lock.entry(id) {
+                    Occupied(e) => {
+                        let other = e.get();
+                        debug_assert!(other.source.is_none());
+                        ensure!(other.digest == entry.digest, "transitive dependency conflict for `{}`, add `{}` to dependency manifest to resolve it", e.key(), e.key());
+                        trace!(
+                            "transitive dependency on `{}` already locked, skip",
+                            e.key()
+                        );
+                    }
+                    Vacant(e) => {
+                        trace!("record lock entry for transitive dependency `{}`", e.key());
+                        e.insert(entry);
+                    }
+                }
+            }
+            Ok(lock)
+        })
         .await
     }
 }

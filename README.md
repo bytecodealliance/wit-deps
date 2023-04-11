@@ -10,11 +10,22 @@ Example:
 
 ```toml
 # wit/deps.toml
-http = "https://github.com/WebAssembly/wasi-http/archive/6c6855a7329fb040a48ecdbad1765be8e694416c.tar.gz"
-io = "https://github.com/rvolosatovs/wasi-io/archive/v0.1.0.tar.gz"
-logging = "https://github.com/WebAssembly/wasi-logging/archive/d106e59b25297d0496e6a5d221ad090e19c3aaa3.tar.gz"
-poll = "https://github.com/WebAssembly/wasi-poll/archive/3ff76670b0d43bc7c8a224c2e65880a963416835.tar.gz"
-random = "https://github.com/WebAssembly/wasi-random/archive/28970c50c3797c0087fa75a15e88bfa39b91e0a0.tar.gz"
+# Use `wit-deps update` to pull in latest changes from "dynamic" branch references
+clocks = "https://github.com/WebAssembly/wasi-clocks/archive/main.tar.gz"
+http = "https://github.com/WebAssembly/wasi-http/archive/main.tar.gz"
+messaging = "https://github.com/WebAssembly/wasi-messaging/archive/main.tar.gz"
+sockets = "https://github.com/WebAssembly/wasi-sockets/archive/main.tar.gz"
+sql = "https://github.com/WebAssembly/wasi-sql/archive/main.tar.gz"
+
+# Pin to a tag
+io = "https://github.com/rvolosatovs/wasi-io/archive/v0.1.0.tar.gz" # this fork renames `streams` interface for compatiblity with wasi-snapshot-preview1
+
+# Pin a dependency to a particular revision and source digests. Each digest is optional
+[keyvalue]
+url = "https://github.com/WebAssembly/wasi-keyvalue/archive/6f3bd6bca07cb7b25703a13f633e05258d56a2dc.tar.gz"
+sha256 = "1755b8f1e9f2e70d0bde06198bf50d12603b454b52bf1f59064c1877baa33dff"
+sha512 = "7bc43665a9de73ec7bef075e32f67ed0ebab04a1e47879f9328e8e52edfb35359512c899ab8a52240fecd0c53ff9c036abefe549e5fb99225518a2e0446d66e0"
+
 ```
 
 A source specfication can also be a structure with the following fields:
@@ -22,11 +33,16 @@ A source specfication can also be a structure with the following fields:
 - `url` - same format as the URL string
 - `sha256` - (optional) hex-encoded sha256 digest of the contents of the URL
 - `sha512` (optional) hex-encoded sha512 digest of the contents of the URL
+- `path` path to the directory containing the WIT definitions
+
+Either `url` or `path` must be specified (both support string format)
 
 Example:
 
 ```toml
 # wit/deps.toml
+mywit = "./path/to/my/wit"
+
 [logging]
 url = "https://github.com/WebAssembly/wasi-logging/archive/d106e59b25297d0496e6a5d221ad090e19c3aaa3.tar.gz"
 sha256 = "4bb4aeab99e7323b30d107aab78e88b2265c1598cc438bc5fbc0d16bb63e798f"
