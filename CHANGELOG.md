@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Relative manifest path support in `wit-deps` binary
+
 ## [0.2.2] - 2023-04-11
 
 ### Added
