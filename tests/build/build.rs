@@ -16,7 +16,7 @@ fn main() -> anyhow::Result<()> {
         )
         .init();
 
-    depit::lock_sync!().context("failed to lock root WIT dependencies")?;
+    wit_deps::lock_sync!().context("failed to lock root WIT dependencies")?;
 
     println!("cargo:rerun-if-changed=wit/deps");
     println!("cargo:rerun-if-changed=wit/deps.lock");

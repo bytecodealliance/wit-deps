@@ -5,7 +5,7 @@ inputs:
     description: package specification to build
     required: true
   install-path:
-    description: path within resulting output, from which to install (e.g. `/bin/depit`)
+    description: path within resulting output, from which to install (e.g. `/bin/wit-deps`)
 
 runs:
   using: composite

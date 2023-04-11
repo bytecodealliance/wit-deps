@@ -17,8 +17,8 @@ fn main() -> anyhow::Result<()> {
         .init();
 
     // NOTE: Root WIT definitions are a dependency of this crate, so those have to be locked first
-    depit::lock_sync!("../wit").context("failed to lock root WIT dependencies")?;
-    depit::lock_sync!().context("failed to lock own WIT dependencies")?;
+    wit_deps::lock_sync!("../wit").context("failed to lock root WIT dependencies")?;
+    wit_deps::lock_sync!().context("failed to lock own WIT dependencies")?;
 
     println!("cargo:rerun-if-changed=wit/deps");
     println!("cargo:rerun-if-changed=wit/deps.lock");
