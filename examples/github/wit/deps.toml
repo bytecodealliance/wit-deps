@@ -1,4 +1,4 @@
-# Use `depit update` to pull in latest changes from "dynamic" branch references
+# Use `wit-deps update` to pull in latest changes from "dynamic" branch references
 http = "https://github.com/WebAssembly/wasi-http/archive/main.tar.gz"
 poll = "https://github.com/WebAssembly/wasi-poll/archive/main.tar.gz"
 random = "https://github.com/WebAssembly/wasi-random/archive/main.tar.gz"

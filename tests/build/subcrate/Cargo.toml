@@ -8,5 +8,5 @@ wit-bindgen = { workspace = true, features = ["default"] }
 
 [build-dependencies]
 anyhow = { workspace = true, features = ["std"] }
-depit = { workspace = true }
 tracing-subscriber = { workspace = true, features = ["ansi", "env-filter", "fmt", "json", "std"] }
+wit-deps = { workspace = true }

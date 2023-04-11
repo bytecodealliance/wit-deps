@@ -2,7 +2,7 @@ name: install Nix
 
 inputs:
   cachixAuthToken:
-    description: auth token for https://app.cachix.org/cache/rvolosatovs
+    description: auth token for https://app.cachix.org/cache/bytecodealliance
 
 env:
   SEGMENT_DOWNLOAD_TIMEOUT_MINS: 1 # abort caching attempt if it's slow
@@ -30,5 +30,5 @@ runs:
   - uses: cachix/cachix-action@v12
     continue-on-error: true
     with:
-      name: rvolosatovs
+      name: bytecodealliance
       authToken: '${{ inputs.cachixAuthToken }}'

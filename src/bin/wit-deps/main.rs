@@ -4,11 +4,11 @@ use std::path::PathBuf;
 
 use anyhow::Context;
 use clap::{Parser, Subcommand};
-use depit::Identifier;
 use tokio::fs::File;
 use tokio::io;
 use tokio_util::compat::TokioAsyncWriteCompatExt;
 use tracing_subscriber::prelude::*;
+use wit_deps::Identifier;
 
 #[derive(Debug, Parser)]
 #[command(author, version, about, long_about = None)]
@@ -80,21 +80,21 @@ async fn main() -> anyhow::Result<()> {
     } = Cli::parse();
 
     match command {
-        None => depit::lock_path(None, manifest_path, lock_path, deps_path, None)
+        None => wit_deps::lock_path(None, manifest_path, lock_path, deps_path, None)
             .await
             .map(|_| ()),
         Some(Command::Lock { package }) => {
-            depit::lock_path(None, manifest_path, lock_path, deps_path, &package)
+            wit_deps::lock_path(None, manifest_path, lock_path, deps_path, &package)
                 .await
                 .map(|_| ())
         }
         Some(Command::Update { package }) => {
-            depit::update_path(None, manifest_path, lock_path, deps_path, &package)
+            wit_deps::update_path(None, manifest_path, lock_path, deps_path, &package)
                 .await
                 .map(|_| ())
         }
         Some(Command::Tar { package, output }) => {
-            depit::lock_path(None, manifest_path, lock_path, &deps_path, [&package])
+            wit_deps::lock_path(None, manifest_path, lock_path, &deps_path, [&package])
                 .await
                 .map(|_| ())?;
             let package = deps_path.join(package);
@@ -102,9 +102,9 @@ async fn main() -> anyhow::Result<()> {
                 let output = File::create(&output).await.with_context(|| {
                     format!("failed to create output path `{}`", output.display())
                 })?;
-                depit::tar(package, output.compat_write()).await?;
+                wit_deps::tar(package, output.compat_write()).await?;
             } else {
-                depit::tar(package, io::stdout().compat_write()).await?;
+                wit_deps::tar(package, io::stdout().compat_write()).await?;
             }
             Ok(())
         }

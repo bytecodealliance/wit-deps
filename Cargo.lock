@@ -263,10 +263,10 @@ name = "build-test"
 version = "0.0.0"
 dependencies = [
  "anyhow",
- "depit",
  "subcrate",
  "tracing-subscriber",
  "wit-bindgen",
+ "wit-deps",
 ]
 
 [[package]]
@@ -410,45 +410,6 @@ checksum = "6d2301688392eb071b0bf1a37be05c469d3cc4dbbd95df672fe28ab021e6a096"
 dependencies = [
  "quote",
  "syn 1.0.109",
-]
-
-[[package]]
-name = "depit"
-version = "0.2.2"
-dependencies = [
- "anyhow",
- "async-compression",
- "async-std",
- "async-tar",
- "async-trait",
- "directories",
- "futures",
- "hex",
- "reqwest",
- "serde",
- "sha2",
- "tokio",
- "tokio-stream",
- "tokio-util",
- "toml",
- "tracing",
- "url",
-]
-
-[[package]]
-name = "depit-cli"
-version = "0.2.2"
-dependencies = [
- "anyhow",
- "build-test",
- "camino",
- "clap",
- "depit",
- "tokio",
- "tokio-util",
- "toml",
- "tracing-subscriber",
- "wit-bindgen",
 ]
 
 [[package]]
@@ -1378,9 +1339,9 @@ name = "subcrate"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "depit",
  "tracing-subscriber",
  "wit-bindgen",
+ "wit-deps",
 ]
 
 [[package]]
@@ -2140,6 +2101,45 @@ dependencies = [
  "wasm-metadata",
  "wasmparser",
  "wit-parser",
+]
+
+[[package]]
+name = "wit-deps"
+version = "0.2.2"
+dependencies = [
+ "anyhow",
+ "async-compression",
+ "async-std",
+ "async-tar",
+ "async-trait",
+ "directories",
+ "futures",
+ "hex",
+ "reqwest",
+ "serde",
+ "sha2",
+ "tokio",
+ "tokio-stream",
+ "tokio-util",
+ "toml",
+ "tracing",
+ "url",
+]
+
+[[package]]
+name = "wit-deps-cli"
+version = "0.2.2"
+dependencies = [
+ "anyhow",
+ "build-test",
+ "camino",
+ "clap",
+ "tokio",
+ "tokio-util",
+ "toml",
+ "tracing-subscriber",
+ "wit-bindgen",
+ "wit-deps",
 ]
 
 [[package]]

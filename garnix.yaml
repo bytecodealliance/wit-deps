@@ -8,15 +8,15 @@ builds:
   - devShells.x86_64-linux
 
   - packages.aarch64-darwin.default
-  - packages.aarch64-darwin.depit
-  - packages.aarch64-darwin.depit-aarch64-apple-darwin
-  - packages.aarch64-darwin.depit-aarch64-apple-darwin-oci
+  - packages.aarch64-darwin.wit-deps
+  - packages.aarch64-darwin.wit-deps-aarch64-apple-darwin
+  - packages.aarch64-darwin.wit-deps-aarch64-apple-darwin-oci
 
   - packages.x86_64-linux.default
-  - packages.x86_64-linux.depit
-  - packages.x86_64-linux.depit-aarch64-unknown-linux-musl
-  - packages.x86_64-linux.depit-aarch64-unknown-linux-musl-oci
-  - packages.x86_64-linux.depit-armv7-unknown-linux-musleabihf
-  - packages.x86_64-linux.depit-armv7-unknown-linux-musleabihf-oci
-  - packages.x86_64-linux.depit-x86_64-unknown-linux-musl
-  - packages.x86_64-linux.depit-x86_64-unknown-linux-musl-oci
+  - packages.x86_64-linux.wit-deps
+  - packages.x86_64-linux.wit-deps-aarch64-unknown-linux-musl
+  - packages.x86_64-linux.wit-deps-aarch64-unknown-linux-musl-oci
+  - packages.x86_64-linux.wit-deps-armv7-unknown-linux-musleabihf
+  - packages.x86_64-linux.wit-deps-armv7-unknown-linux-musleabihf-oci
+  - packages.x86_64-linux.wit-deps-x86_64-unknown-linux-musl
+  - packages.x86_64-linux.wit-deps-x86_64-unknown-linux-musl-oci

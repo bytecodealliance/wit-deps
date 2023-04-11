@@ -1,6 +1,6 @@
 # Description
 
-`depit` is a simple WIT dependency manager binary and Rust library, which manages your `wit/deps`. It's main objective is to ensure that whatever is located in your `wit/deps` is consistent with your dependency manifest (default: `wit/deps.toml`) and dependency lock (default: `wit/deps.lock`).
+`wit-deps` is a simple WIT dependency manager binary and Rust library, which manages your `wit/deps`. It's main objective is to ensure that whatever is located in your `wit/deps` is consistent with your dependency manifest (default: `wit/deps.toml`) and dependency lock (default: `wit/deps.lock`).
 
 # Manifest
 
@@ -35,19 +35,19 @@ sha512 = "13b52b59afd98dd4938e3a651fad631d41a2e84ce781df5d8957eded77a8e1ac4277e7
 
 # Usage
 
-Note, `depit` assumes that it has full control over `wit/deps` and so it may delete and modify contents of `wit/deps` at any time!
+Note, `wit-deps` assumes that it has full control over `wit/deps` and so it may delete and modify contents of `wit/deps` at any time!
 
 ## Interactive
 
-Use `depit` or `depit lock` to populate `wit/deps` using  `wit/deps.toml` manifest and `wit/deps.lock` (will be created if it does not exist)
+Use `wit-deps` or `wit-deps lock` to populate `wit/deps` using  `wit/deps.toml` manifest and `wit/deps.lock` (will be created if it does not exist)
 
 ## Rust
 
-Use `depit::lock!` macro in `build.rs` of your project to automatically lock your `wit/deps`.
+Use `wit-deps::lock!` macro in `build.rs` of your project to automatically lock your `wit/deps`.
 
 See crate documentation for more advanced use cases
 
 # Design decisions
 
-- `depit` is lazy by default and will only fetch/write when it absolutely has to
-- `depit` assumes that result of fetching from a URL is deterministic, that is contents returned by GET of a URL `domain.com` must always return exactly the same contents. Note, that you can use `sha256` or `sha512` fields in your manifest entry to invalidate the cache in this case
+- `wit-deps` is lazy by default and will only fetch/write when it absolutely has to
+- `wit-deps` assumes that result of fetching from a URL is deterministic, that is contents returned by GET of a URL `domain.com` must always return exactly the same contents. Note, that you can use `sha256` or `sha512` fields in your manifest entry to invalidate the cache in this case

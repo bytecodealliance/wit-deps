@@ -30,7 +30,7 @@
     with nix-log.lib;
     with nixify.lib; let
       lib.tar = {
-        depit ? self.packages.${pkgs.buildPlatform.system}.depit,
+        wit-deps ? self.packages.${pkgs.buildPlatform.system}.wit-deps,
         id,
         lock,
         manifest,
@@ -39,7 +39,7 @@
       }: let
         outputHash = (readTOML lock).${id}.${outputHashAlgo};
       in
-        trace' "depit.lib.tar" {
+        trace' "wit-deps.lib.tar" {
           inherit
             id
             lock
@@ -54,9 +54,9 @@
             outputHashAlgo
             ;
 
-          name = "depit-dep-${id}.tar";
-          builder = pkgs.writeShellScript "depit-tar" ''
-            ${depit}/bin/depit --lock ${lock} --manifest ${manifest} tar ${id} --output $out
+          name = "wit-deps-dep-${id}.tar";
+          builder = pkgs.writeShellScript "wit-deps-tar" ''
+            ${wit-deps}/bin/wit-deps --lock ${lock} --manifest ${manifest} tar ${id} --output $out
           '';
 
           preferLocalBuild = true;
@@ -65,12 +65,12 @@
         };
 
       lib.lock = {
-        depit ? self.packages.${pkgs.buildPlatform.system}.depit,
+        wit-deps ? self.packages.${pkgs.buildPlatform.system}.wit-deps,
         lock,
         manifest,
         pkgs,
       }:
-        trace' "depit.lib.lock" {
+        trace' "wit-deps.lib.lock" {
           inherit
             lock
             manifest
@@ -78,10 +78,10 @@
         }
         mapAttrs (id: _:
           pkgs.stdenv.mkDerivation {
-            name = "depit-dep-${id}";
+            name = "wit-deps-dep-${id}";
             src = lib.tar {
               inherit
-                depit
+                wit-deps
                 id
                 lock
                 manifest
@@ -97,7 +97,7 @@
         (readTOML lock);
 
       lib.writeLockScript = {
-        depit ? self.packages.${pkgs.buildPlatform.system}.depit,
+        wit-deps ? self.packages.${pkgs.buildPlatform.system}.wit-deps,
         lock,
         manifest,
         out ? "$out",
@@ -105,21 +105,21 @@
       } @ args: let
         lock' = lib.lock {
           inherit
-            depit
+            wit-deps
             lock
             manifest
             pkgs
             ;
         };
       in
-        trace' "depit.lib.writeLockScript" {
+        trace' "wit-deps.lib.writeLockScript" {
           inherit
             lock
             manifest
             out
             ;
         }
-        pkgs.writeShellScript "depit-lock" (concatLines (
+        pkgs.writeShellScript "wit-deps-lock" (concatLines (
           [
             ''
               mkdir -p ${out}
@@ -138,7 +138,7 @@
       rust.mkFlake {
         src = ./.;
 
-        name = "depit";
+        name = "wit-deps";
 
         excludePaths = [
           ".github"
@@ -157,7 +157,7 @@
         clippy.deny = ["warnings"];
         clippy.workspace = true;
 
-        doc.packages = ["depit"];
+        doc.packages = ["wit-deps"];
 
         test.workspace = true;
 
@@ -181,8 +181,8 @@
                 out = "./tests/build/wit/deps";
               }
               // optionalAttrs (doCheck && !(args ? pkgsCross)) {
-                # for native builds, break the recursive dependency cycle by using untested depit to lock deps
-                depit = self.packages.${pkgs.buildPlatform.system}.depit.overrideAttrs (_: {
+                # for native builds, break the recursive dependency cycle by using untested wit-deps to lock deps
+                wit-deps = self.packages.${pkgs.buildPlatform.system}.wit-deps.overrideAttrs (_: {
                   inherit preBuild;
                   doCheck = false;
                 });

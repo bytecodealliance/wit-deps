@@ -1,5 +1,5 @@
 [package]
-name = "depit-cli"
+name = "wit-deps-cli"
 version = "0.2.2"
 description = "WIT dependency manager"
 
@@ -14,7 +14,7 @@ authors = ["Roman Volosatovs"]
 categories = ["wasm"]
 edition = "2021"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/rvolosatovs/depit"
+repository = "https://github.com/bytecodealliance/wit-deps"
 
 [badges.maintenance]
 status = "actively-developed"
@@ -23,7 +23,7 @@ status = "actively-developed"
 anyhow = { workspace = true, features = ["std"] }
 camino = { workspace = true }
 clap = { workspace = true, features = ["std", "color", "help", "usage", "error-context", "suggestions", "derive"] }
-depit = { workspace = true }
+wit-deps = { workspace = true }
 tokio = { workspace = true, features = ["io-std", "fs", "macros", "rt-multi-thread"] }
 tokio-util = { workspace = true, features = ["compat"] }
 toml = { workspace = true, features = ["display", "parse"] }
@@ -41,7 +41,6 @@ async-tar = { version = "0.4", default-features = false }
 async-trait = { version = "0.1", default-features = false }
 camino = { version = "1", default-features = false }
 clap = { version = "4", default-features = false }
-depit = { path = "./crates/depit", version = "0.2" }
 directories = { version = "5", default-features = false }
 futures = { version = "0.3", default-features = false }
 build-test = { path = "./tests/build" }
@@ -57,3 +56,4 @@ tracing = { version = "0.1", default-features = false }
 tracing-subscriber = { version = "0.3", default-features = false }
 url = { version = "2", default-features = false }
 wit-bindgen = { version = "0.4", default-features = false }
+wit-deps = { path = "./crates/wit-deps", version = "0.2" }

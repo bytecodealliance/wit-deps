@@ -1,4 +1,4 @@
-//! Depit core
+//! WIT dependency management core library
 
 #![forbid(clippy::unwrap_used)]
 #![warn(clippy::pedantic)]
@@ -373,7 +373,7 @@ macro_rules! lock {
 macro_rules! lock_sync {
     ($($args:tt)*) => {
         $crate::tokio::runtime::Builder::new_multi_thread()
-            .thread_name("depit/lock_sync")
+            .thread_name("wit-deps/lock_sync")
             .enable_io()
             .enable_time()
             .build()?
