@@ -9,7 +9,7 @@ mod digest;
 mod lock;
 mod manifest;
 
-pub use cache::{Cache, Local as LocalCache};
+pub use cache::{Cache, Local as LocalCache, Write as WriteCache};
 pub use digest::{Digest, Reader as DigestReader, Writer as DigestWriter};
 pub use lock::{Entry as LockEntry, EntrySource as LockEntrySource, Lock};
 pub use manifest::{Entry as ManifestEntry, Manifest};
@@ -22,7 +22,6 @@ use std::ffi::{OsStr, OsString};
 use std::path::Path;
 
 use anyhow::{bail, Context};
-use directories::ProjectDirs;
 use futures::{try_join, AsyncRead, AsyncWrite, FutureExt, Stream, TryStreamExt};
 use tokio::fs;
 use tokio_stream::wrappers::ReadDirStream;
@@ -155,9 +154,16 @@ where
     tar.into_inner().await
 }
 
+fn cache() -> Option<impl Cache> {
+    LocalCache::cache_dir().map(|cache| {
+        debug!("using cache at `{cache}`");
+        cache
+    })
+}
+
 /// Given a TOML-encoded manifest and optional TOML-encoded lock, ensures that the path pointed to by
 /// `deps` is in sync with the manifest and lock. This is a potentially destructive operation!
-/// Returns a lock if the lock passed to this function was either `None` or out-of-sync.
+/// Returns a TOML-encoded lock if the lock passed to this function was either `None` or out-of-sync.
 ///
 /// # Errors
 ///
@@ -180,25 +186,73 @@ pub async fn lock(
         .transpose()
         .context("failed to decode lock")?;
 
-    let dirs = ProjectDirs::from("", "", env!("CARGO_PKG_NAME"));
-    let cache = dirs.as_ref().map(ProjectDirs::cache_dir).map(|cache| {
-        debug!("using cache at `{}`", cache.display());
-        LocalCache::from(cache)
-    });
+    let deps = deps.as_ref();
+    let lock = manifest
+        .lock(at, deps, old_lock.as_ref(), cache().as_ref(), packages)
+        .await
+        .with_context(|| format!("failed to lock deps to `{}`", deps.display()))?;
+    match old_lock {
+        Some(old_lock) if lock == old_lock => Ok(None),
+        _ => toml::to_string(&lock)
+            .map(Some)
+            .context("failed to encode lock"),
+    }
+}
+
+/// Given a TOML-encoded manifest, ensures that the path pointed to by
+/// `deps` is in sync with the manifest. This is a potentially destructive operation!
+/// Returns a TOML-encoded lock on success.
+///
+/// # Errors
+///
+/// Returns an error if anything in the pipeline fails
+#[instrument(level = "trace", skip(at, manifest, deps, packages))]
+pub async fn update(
+    at: Option<impl AsRef<Path>>,
+    manifest: impl AsRef<str>,
+    deps: impl AsRef<Path>,
+    packages: impl IntoIterator<Item = &Identifier>,
+) -> anyhow::Result<String> {
+    let manifest: Manifest =
+        toml::from_str(manifest.as_ref()).context("failed to decode manifest")?;
 
     let deps = deps.as_ref();
     let lock = manifest
-        .lock(at, deps, old_lock.as_ref(), cache.as_ref(), packages)
+        .lock(at, deps, None, cache().map(WriteCache).as_ref(), packages)
         .await
         .with_context(|| format!("failed to lock deps to `{}`", deps.display()))?;
+    toml::to_string(&lock).context("failed to encode lock")
+}
 
-    match old_lock {
-        Some(old_lock) if lock == old_lock => Ok(None),
-        _ => {
-            let lock = toml::to_string(&lock).context("failed to encode lock")?;
-            Ok(Some(lock))
-        }
+async fn read_manifest_string(path: impl AsRef<Path>) -> std::io::Result<String> {
+    let path = path.as_ref();
+    fs::read_to_string(&path).await.map_err(|e| {
+        std::io::Error::new(
+            e.kind(),
+            format!("failed to read manifest at `{}`: {e}", path.display()),
+        )
+    })
+}
+
+async fn write_lock(path: impl AsRef<Path>, buf: impl AsRef<[u8]>) -> std::io::Result<()> {
+    let path = path.as_ref();
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).await.map_err(|e| {
+            std::io::Error::new(
+                e.kind(),
+                format!(
+                    "failed to create lock parent directory `{}`: {e}",
+                    parent.display()
+                ),
+            )
+        })?;
     }
+    fs::write(&path, &buf).await.map_err(|e| {
+        std::io::Error::new(
+            e.kind(),
+            format!("failed to write lock to `{}`: {e}", path.display()),
+        )
+    })
 }
 
 /// Like [lock](self::lock()), but reads the manifest at `manifest_path` and reads/writes the lock at `lock_path`.
@@ -216,36 +270,48 @@ pub async fn lock_path(
     deps: impl AsRef<Path>,
     packages: impl IntoIterator<Item = &Identifier>,
 ) -> anyhow::Result<bool> {
-    let manifest_path = manifest_path.as_ref();
     let lock_path = lock_path.as_ref();
     let (manifest, lock) = try_join!(
-        fs::read_to_string(&manifest_path).map(|res| res
-            .with_context(|| format!("failed to read manifest at `{}`", manifest_path.display()))),
+        read_manifest_string(manifest_path),
         fs::read_to_string(&lock_path).map(|res| match res {
             Ok(lock) => Ok(Some(lock)),
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
-            Err(e) => bail!("failed to read lock at `{}`: {e}", lock_path.display()),
+            Err(e) => Err(std::io::Error::new(
+                e.kind(),
+                format!("failed to read lock at `{}`: {e}", lock_path.display())
+            )),
         }),
     )?;
     if let Some(lock) = self::lock(at, manifest, lock, deps, packages)
         .await
         .context("failed to lock dependencies")?
     {
-        if let Some(parent) = lock_path.parent() {
-            fs::create_dir_all(parent).await.with_context(|| {
-                format!(
-                    "failed to create lock parent directory `{}`",
-                    parent.display()
-                )
-            })?;
-        }
-        fs::write(&lock_path, &lock)
-            .await
-            .with_context(|| format!("failed to write lock to `{}`", lock_path.display()))?;
+        write_lock(lock_path, lock).await?;
         Ok(true)
     } else {
         Ok(false)
     }
+}
+
+/// Like [update](self::update()), but reads the manifest at `manifest_path` and writes the lock at `lock_path`.
+///
+/// # Errors
+///
+/// Returns an error if anything in the pipeline fails
+#[instrument(level = "trace", skip(manifest_path, lock_path, deps, packages))]
+pub async fn update_path(
+    at: Option<&Path>,
+    manifest_path: impl AsRef<Path>,
+    lock_path: impl AsRef<Path>,
+    deps: impl AsRef<Path>,
+    packages: impl IntoIterator<Item = &Identifier>,
+) -> anyhow::Result<()> {
+    let manifest = read_manifest_string(manifest_path).await?;
+    let lock = self::update(at, manifest, deps, packages)
+        .await
+        .context("failed to lock dependencies")?;
+    write_lock(lock_path, lock).await?;
+    Ok(())
 }
 
 /// Asynchronously ensure dependency manifest, lock and dependencies are in sync.
