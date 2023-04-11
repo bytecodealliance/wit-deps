@@ -264,12 +264,12 @@ async fn write_lock(path: impl AsRef<Path>, buf: impl AsRef<[u8]>) -> std::io::R
 /// Returns an error if anything in the pipeline fails
 #[instrument(level = "trace", skip(manifest_path, lock_path, deps, packages))]
 pub async fn lock_path(
-    at: Option<&Path>,
     manifest_path: impl AsRef<Path>,
     lock_path: impl AsRef<Path>,
     deps: impl AsRef<Path>,
     packages: impl IntoIterator<Item = &Identifier>,
 ) -> anyhow::Result<bool> {
+    let manifest_path = manifest_path.as_ref();
     let lock_path = lock_path.as_ref();
     let (manifest, lock) = try_join!(
         read_manifest_string(manifest_path),
@@ -282,7 +282,7 @@ pub async fn lock_path(
             )),
         }),
     )?;
-    if let Some(lock) = self::lock(at, manifest, lock, deps, packages)
+    if let Some(lock) = self::lock(manifest_path.parent(), manifest, lock, deps, packages)
         .await
         .context("failed to lock dependencies")?
     {
@@ -300,14 +300,14 @@ pub async fn lock_path(
 /// Returns an error if anything in the pipeline fails
 #[instrument(level = "trace", skip(manifest_path, lock_path, deps, packages))]
 pub async fn update_path(
-    at: Option<&Path>,
     manifest_path: impl AsRef<Path>,
     lock_path: impl AsRef<Path>,
     deps: impl AsRef<Path>,
     packages: impl IntoIterator<Item = &Identifier>,
 ) -> anyhow::Result<()> {
+    let manifest_path = manifest_path.as_ref();
     let manifest = read_manifest_string(manifest_path).await?;
-    let lock = self::update(at, manifest, deps, packages)
+    let lock = self::update(manifest_path.parent(), manifest, deps, packages)
         .await
         .context("failed to lock dependencies")?;
     write_lock(lock_path, lock).await?;

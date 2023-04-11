@@ -2105,7 +2105,7 @@ dependencies = [
 
 [[package]]
 name = "wit-deps"
-version = "0.2.2"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "async-compression",
@@ -2128,7 +2128,7 @@ dependencies = [
 
 [[package]]
 name = "wit-deps-cli"
-version = "0.2.2"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "build-test",
