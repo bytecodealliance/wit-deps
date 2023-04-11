@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2023-04-11
+
 ### Added
 
 - Transitive dependencies will now be pulled in from `wit/deps` of dependencies in the manifest
@@ -45,7 +47,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial `wit-deps` library and binary implementations
 
-[unreleased]: https://github.com/bytecodealliance/wit-deps/compare/v0.2.2...HEAD
+[unreleased]: https://github.com/bytecodealliance/wit-deps/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/bytecodealliance/wit-deps/releases/tag/v0.3.0
 [0.2.2]: https://github.com/bytecodealliance/wit-deps/releases/tag/v0.2.2
 [0.2.1]: https://github.com/bytecodealliance/wit-deps/releases/tag/v0.2.1
 [0.2.0]: https://github.com/bytecodealliance/wit-deps/releases/tag/v0.2.0
