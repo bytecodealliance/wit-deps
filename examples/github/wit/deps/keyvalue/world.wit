@@ -1,0 +1,12 @@
+default world keyvalue {
+	import readwrite: pkg.readwrite
+	import atomic: pkg.atomic
+	import batch: pkg.batch
+}
+
+world keyvalue-handle-watch {
+	import readwrite: pkg.readwrite
+	import atomic: pkg.atomic
+	import batch: pkg.batch
+	export handle-watch: pkg.handle-watch
+}

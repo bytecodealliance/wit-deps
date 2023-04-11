@@ -17,15 +17,15 @@ pub use manifest::{Entry as ManifestEntry, Manifest};
 pub use futures;
 pub use tokio;
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::ffi::{OsStr, OsString};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
-use anyhow::{bail, Context};
+use anyhow::Context;
 use futures::{try_join, AsyncRead, AsyncWrite, FutureExt, Stream, TryStreamExt};
 use tokio::fs;
 use tokio_stream::wrappers::ReadDirStream;
-use tracing::{debug, instrument};
+use tracing::{debug, instrument, trace};
 
 /// WIT dependency identifier
 pub type Identifier = String;
@@ -40,98 +40,221 @@ fn is_wit(path: impl AsRef<Path>) -> bool {
         .unwrap_or_default()
 }
 
+#[instrument(level = "trace", skip(path))]
+async fn remove_dir_all(path: impl AsRef<Path>) -> std::io::Result<()> {
+    let path = path.as_ref();
+    match fs::remove_dir_all(path).await {
+        Ok(()) => {
+            trace!("removed `{}`", path.display());
+            Ok(())
+        }
+        Err(e) => Err(std::io::Error::new(
+            e.kind(),
+            format!("failed to remove `{}`: {e}", path.display()),
+        )),
+    }
+}
+
+#[instrument(level = "trace", skip(path))]
+async fn recreate_dir(path: impl AsRef<Path>) -> std::io::Result<()> {
+    let path = path.as_ref();
+    match remove_dir_all(path).await {
+        Ok(()) => {}
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+        Err(e) => return Err(e),
+    };
+    fs::create_dir_all(path)
+        .await
+        .map(|()| trace!("recreated `{}`", path.display()))
+        .map_err(|e| {
+            std::io::Error::new(
+                e.kind(),
+                format!("failed to create `{}`: {e}", path.display()),
+            )
+        })
+}
+
 /// Returns a stream of WIT file names within a directory at `path`
 #[instrument(level = "trace", skip(path))]
 async fn read_wits(
     path: impl AsRef<Path>,
 ) -> std::io::Result<impl Stream<Item = std::io::Result<OsString>>> {
-    let st = fs::read_dir(path).await.map(ReadDirStream::new)?;
+    let path = path.as_ref();
+    let st = fs::read_dir(path)
+        .await
+        .map(ReadDirStream::new)
+        .map_err(|e| {
+            std::io::Error::new(
+                e.kind(),
+                format!("failed to read directory at `{}`: {e}", path.display()),
+            )
+        })?;
     Ok(st.try_filter_map(|e| async move {
         let name = e.file_name();
         if !is_wit(&name) {
+            trace!("{} is not a WIT definition, skip", name.to_string_lossy());
             return Ok(None);
         }
         if e.file_type().await?.is_dir() {
+            trace!("{} is a directory, skip", name.to_string_lossy());
             return Ok(None);
         }
         Ok(Some(name))
     }))
 }
 
-/// Copies all WIT files from directory at `src` to `dst`
+/// Copies all WIT definitions from directory at `src` to `dst` creating `dst` directory, if it does not exist.
 #[instrument(level = "trace", skip(src, dst))]
-async fn copy_wits(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> std::io::Result<()> {
+async fn install_wits(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> std::io::Result<()> {
     let src = src.as_ref();
     let dst = dst.as_ref();
+    recreate_dir(dst).await?;
     read_wits(src)
-        .await
-        .map_err(|e| std::io::Error::new(e.kind(), format!("failed to read `{}`", src.display())))?
+        .await?
         .try_for_each_concurrent(None, |name| async {
             let src = src.join(&name);
             let dst = dst.join(name);
-            if let Some(parent) = dst.parent() {
-                fs::create_dir_all(parent).await.map_err(|e| {
+            fs::copy(&src, &dst)
+                .await
+                .map(|_| trace!("copied `{}` to `{}`", src.display(), dst.display()))
+                .map_err(|e| {
                     std::io::Error::new(
                         e.kind(),
                         format!(
-                            "failed to create destination parent directory `{}`: {e}",
-                            parent.display()
+                            "failed to copy `{}` to `{}`: {e}",
+                            src.display(),
+                            dst.display()
                         ),
                     )
-                })?;
-            }
-            fs::copy(&src, &dst).await.map(|_| ()).map_err(|e| {
-                std::io::Error::new(
-                    e.kind(),
-                    format!(
-                        "failed to copy `{}` to `{}`: {e}",
-                        src.display(),
-                        dst.display()
-                    ),
-                )
-            })
+                })
         })
         .await
 }
 
-/// Unpacks all WIT interfaces found within `wit` subtree of a tar archive read from `tar` to `dst`
+/// Copies all WIT files from directory at `src` to `dst` and returns a vector identifiers of all copied
+/// transitive dependencies.
+#[instrument(level = "trace", skip(src, dst, skip_deps))]
+async fn copy_wits(
+    src: impl AsRef<Path>,
+    dst: impl AsRef<Path>,
+    skip_deps: &HashSet<Identifier>,
+) -> std::io::Result<HashMap<Identifier, PathBuf>> {
+    let src = src.as_ref();
+    let deps = src.join("deps");
+    let dst = dst.as_ref();
+    try_join!(install_wits(src, dst), async {
+        match (dst.parent(), fs::read_dir(&deps).await) {
+            (Some(base), Ok(dir)) => {
+                ReadDirStream::new(dir)
+                    .try_filter_map(|e| async move {
+                        let name = e.file_name();
+                        let Some(id) = name.to_str().map(Identifier::from) else {
+                            return Ok(None)
+                        };
+                        if skip_deps.contains(&id) {
+                            return Ok(None);
+                        }
+                        let ft = e.file_type().await?;
+                        if !(ft.is_dir()
+                            || ft.is_symlink() && fs::metadata(e.path()).await?.is_dir())
+                        {
+                            return Ok(None);
+                        }
+                        Ok(Some(id))
+                    })
+                    .and_then(|id| async {
+                        let dst = base.join(&id);
+                        install_wits(deps.join(&id), &dst).await?;
+                        Ok((id, dst))
+                    })
+                    .try_collect()
+                    .await
+            }
+            (None, _) => Ok(HashMap::default()),
+            (_, Err(e)) if e.kind() == std::io::ErrorKind::NotFound => Ok(HashMap::default()),
+            (_, Err(e)) => Err(std::io::Error::new(
+                e.kind(),
+                format!("failed to read directory at `{}`: {e}", deps.display()),
+            )),
+        }
+    })
+    .map(|((), ids)| ids)
+}
+
+/// Unpacks all WIT interfaces found within `wit` subtree of a tar archive read from `tar` to
+/// `dst` and returns a vector of all unpacked transitive dependency identifiers.
 ///
 /// # Errors
 ///
 /// Returns and error if the operation fails
-#[instrument(level = "trace", skip(tar, dst))]
-pub async fn untar(tar: impl AsyncRead + Unpin, dst: impl AsRef<Path>) -> anyhow::Result<()> {
+#[instrument(level = "trace", skip(tar, dst, skip_deps))]
+pub async fn untar(
+    tar: impl AsyncRead + Unpin,
+    dst: impl AsRef<Path>,
+    skip_deps: &HashSet<Identifier>,
+) -> std::io::Result<HashMap<Identifier, PathBuf>> {
+    use std::io::{Error, Result};
+
+    async fn unpack(e: &mut async_tar::Entry<impl Unpin + AsyncRead>, dst: &Path) -> Result<()> {
+        e.unpack(dst).await.map_err(|e| {
+            Error::new(
+                e.kind(),
+                format!("failed to unpack `{}`: {e}", dst.display()),
+            )
+        })?;
+        trace!("unpacked `{}`", dst.display());
+        Ok(())
+    }
+
     let dst = dst.as_ref();
-
-    match fs::remove_dir_all(dst).await {
-        Ok(()) => {}
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
-        Err(e) => bail!("failed to remove `{}`: {e}", dst.display()),
-    };
-    fs::create_dir_all(dst)
-        .await
-        .with_context(|| format!("failed to create `{}`", dst.display()))?;
-
+    recreate_dir(dst).await?;
     async_tar::Archive::new(tar)
         .entries()
-        .context("failed to unpack archive metadata")?
-        .try_for_each(|mut e| async move {
-            let path = e.path()?;
+        .map_err(|e| Error::new(e.kind(), format!("failed to unpack archive metadata: {e}")))?
+        .try_filter_map(|mut e| async move {
+            let path = e
+                .path()
+                .map_err(|e| Error::new(e.kind(), format!("failed to query entry path: {e}")))?;
             let mut path = path.into_iter().map(OsStr::to_str);
-            match (path.next(), path.next(), path.next(), path.next()) {
-                (Some(Some("wit")), Some(Some(name)), None, None)
-                | (Some(_), Some(Some("wit")), Some(Some(name)), None)
+            match (
+                path.next(),
+                path.next(),
+                path.next(),
+                path.next(),
+                path.next(),
+            ) {
+                (Some(Some("wit")), Some(Some(name)), None, None, None)
+                | (Some(_), Some(Some("wit")), Some(Some(name)), None, None)
                     if is_wit(name) =>
                 {
-                    e.unpack(dst.join(name)).await?;
-                    Ok(())
+                    let dst = dst.join(name);
+                    unpack(&mut e, &dst).await?;
+                    Ok(None)
                 }
-                _ => Ok(()),
+                (Some(Some("wit")), Some(Some("deps")), Some(Some(id)), Some(Some(name)), None)
+                | (
+                    Some(_),
+                    Some(Some("wit")),
+                    Some(Some("deps")),
+                    Some(Some(id)),
+                    Some(Some(name)),
+                ) if !skip_deps.contains(id) && is_wit(name) => {
+                    let id = Identifier::from(id);
+                    if let Some(base) = dst.parent() {
+                        let dst = base.join(&id);
+                        recreate_dir(&dst).await?;
+                        let wit = dst.join(name);
+                        unpack(&mut e, &wit).await?;
+                        Ok(Some((id, dst)))
+                    } else {
+                        Ok(None)
+                    }
+                }
+                _ => Ok(None),
             }
         })
+        .try_collect()
         .await
-        .context("failed to unpack archive")?;
-    Ok(())
 }
 
 /// Packages path into a `wit` subtree in deterministic `tar` archive and writes it to `dst`.
@@ -168,13 +291,12 @@ fn cache() -> Option<impl Cache> {
 /// # Errors
 ///
 /// Returns an error if anything in the pipeline fails
-#[instrument(level = "trace", skip(at, manifest, lock, deps, packages))]
+#[instrument(level = "trace", skip(at, manifest, lock, deps))]
 pub async fn lock(
     at: Option<impl AsRef<Path>>,
     manifest: impl AsRef<str>,
     lock: Option<impl AsRef<str>>,
     deps: impl AsRef<Path>,
-    packages: impl IntoIterator<Item = &Identifier>,
 ) -> anyhow::Result<Option<String>> {
     let manifest: Manifest =
         toml::from_str(manifest.as_ref()).context("failed to decode manifest")?;
@@ -188,7 +310,7 @@ pub async fn lock(
 
     let deps = deps.as_ref();
     let lock = manifest
-        .lock(at, deps, old_lock.as_ref(), cache().as_ref(), packages)
+        .lock(at, deps, old_lock.as_ref(), cache().as_ref())
         .await
         .with_context(|| format!("failed to lock deps to `{}`", deps.display()))?;
     match old_lock {
@@ -206,19 +328,18 @@ pub async fn lock(
 /// # Errors
 ///
 /// Returns an error if anything in the pipeline fails
-#[instrument(level = "trace", skip(at, manifest, deps, packages))]
+#[instrument(level = "trace", skip(at, manifest, deps))]
 pub async fn update(
     at: Option<impl AsRef<Path>>,
     manifest: impl AsRef<str>,
     deps: impl AsRef<Path>,
-    packages: impl IntoIterator<Item = &Identifier>,
 ) -> anyhow::Result<String> {
     let manifest: Manifest =
         toml::from_str(manifest.as_ref()).context("failed to decode manifest")?;
 
     let deps = deps.as_ref();
     let lock = manifest
-        .lock(at, deps, None, cache().map(WriteCache).as_ref(), packages)
+        .lock(at, deps, None, cache().map(WriteCache).as_ref())
         .await
         .with_context(|| format!("failed to lock deps to `{}`", deps.display()))?;
     toml::to_string(&lock).context("failed to encode lock")
@@ -262,12 +383,11 @@ async fn write_lock(path: impl AsRef<Path>, buf: impl AsRef<[u8]>) -> std::io::R
 /// # Errors
 ///
 /// Returns an error if anything in the pipeline fails
-#[instrument(level = "trace", skip(manifest_path, lock_path, deps, packages))]
+#[instrument(level = "trace", skip(manifest_path, lock_path, deps))]
 pub async fn lock_path(
     manifest_path: impl AsRef<Path>,
     lock_path: impl AsRef<Path>,
     deps: impl AsRef<Path>,
-    packages: impl IntoIterator<Item = &Identifier>,
 ) -> anyhow::Result<bool> {
     let manifest_path = manifest_path.as_ref();
     let lock_path = lock_path.as_ref();
@@ -282,7 +402,7 @@ pub async fn lock_path(
             )),
         }),
     )?;
-    if let Some(lock) = self::lock(manifest_path.parent(), manifest, lock, deps, packages)
+    if let Some(lock) = self::lock(manifest_path.parent(), manifest, lock, deps)
         .await
         .context("failed to lock dependencies")?
     {
@@ -298,16 +418,15 @@ pub async fn lock_path(
 /// # Errors
 ///
 /// Returns an error if anything in the pipeline fails
-#[instrument(level = "trace", skip(manifest_path, lock_path, deps, packages))]
+#[instrument(level = "trace", skip(manifest_path, lock_path, deps))]
 pub async fn update_path(
     manifest_path: impl AsRef<Path>,
     lock_path: impl AsRef<Path>,
     deps: impl AsRef<Path>,
-    packages: impl IntoIterator<Item = &Identifier>,
 ) -> anyhow::Result<()> {
     let manifest_path = manifest_path.as_ref();
     let manifest = read_manifest_string(manifest_path).await?;
-    let lock = self::update(manifest_path.parent(), manifest, deps, packages)
+    let lock = self::update(manifest_path.parent(), manifest, deps)
         .await
         .context("failed to lock dependencies")?;
     write_lock(lock_path, lock).await?;
@@ -345,7 +464,6 @@ macro_rules! lock {
                 include_str!(concat!($dir, "/deps.toml")),
                 lock,
                 concat!($dir, "/deps"),
-                None,
             )
             .await
             {

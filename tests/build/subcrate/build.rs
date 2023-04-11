@@ -10,9 +10,8 @@ fn main() -> anyhow::Result<()> {
                 .with_writer(std::io::stderr),
         )
         .with(
-            tracing_subscriber::EnvFilter::builder()
-                .with_default_directive(tracing_subscriber::filter::LevelFilter::DEBUG.into())
-                .from_env_lossy(),
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info,wit_deps=trace")),
         )
         .init();
 

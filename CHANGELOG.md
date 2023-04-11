@@ -7,9 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Transitive dependencies will now be pulled in from `wit/deps` of dependencies in the manifest
+
 ### Fixed
 
 - Relative manifest path support in `wit-deps` binary
+
+### Removed
+
+- `package` argument to binary and library update and lock functions
 
 ## [0.2.2] - 2023-04-11
 

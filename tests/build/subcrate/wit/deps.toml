@@ -1,6 +1,1 @@
 build = "../../wit"
-http = "../../wit/deps/http"
-io = "../../wit/deps/io"
-logging = "../../wit/deps/logging"
-poll = "../../wit/deps/poll"
-random = "../../wit/deps/random"
