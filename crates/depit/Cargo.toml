@@ -1,6 +1,6 @@
 [package]
 name = "depit"
-version = "0.2.1"
+version = "0.2.2"
 description = "WIT dependency management"
 readme = "../../README.md"
 

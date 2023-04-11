@@ -2,7 +2,6 @@ use crate::{
     copy_wits, untar, Cache, Digest, DigestReader, Identifier, Lock, LockEntry, LockEntrySource,
 };
 
-use core::borrow::Borrow;
 use core::convert::identity;
 use core::fmt;
 use core::ops::Deref;
@@ -352,13 +351,12 @@ impl Manifest {
         self,
         at: Option<impl AsRef<Path>>,
         deps: impl AsRef<Path>,
-        lock: Option<impl Borrow<Lock>>,
+        lock: Option<&Lock>,
         cache: Option<&impl Cache>,
         packages: impl IntoIterator<Item = &Identifier>,
     ) -> anyhow::Result<Lock> {
         let at = at.as_ref();
         let deps = deps.as_ref();
-        let lock = lock.as_ref().map(Borrow::borrow);
         let packages: HashSet<_> = packages.into_iter().collect();
         if let Some(id) = packages.iter().find(|id| !self.contains_key(**id)) {
             bail!("selected package `{id}` not found in manifest")

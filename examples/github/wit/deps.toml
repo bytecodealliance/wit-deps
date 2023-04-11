@@ -1,8 +1,12 @@
-http = "https://github.com/WebAssembly/wasi-http/archive/6c6855a7329fb040a48ecdbad1765be8e694416c.tar.gz"
-io = "https://github.com/rvolosatovs/wasi-io/archive/v0.1.0.tar.gz" # this fork renames `streams` interface for compatiblity with wasi-snapshot-preview1
-poll = "https://github.com/WebAssembly/wasi-poll/archive/3ff76670b0d43bc7c8a224c2e65880a963416835.tar.gz"
-random = "https://github.com/WebAssembly/wasi-random/archive/28970c50c3797c0087fa75a15e88bfa39b91e0a0.tar.gz"
+# Use `depit update` to pull in latest changes from "dynamic" branch references
+http = "https://github.com/WebAssembly/wasi-http/archive/main.tar.gz"
+poll = "https://github.com/WebAssembly/wasi-poll/archive/main.tar.gz"
+random = "https://github.com/WebAssembly/wasi-random/archive/main.tar.gz"
 
+# Pin to a tag
+io = "https://github.com/rvolosatovs/wasi-io/archive/v0.1.0.tar.gz" # this fork renames `streams` interface for compatiblity with wasi-snapshot-preview1
+
+# Pin a dependency to a particular revision and source digests
 [logging]
 url = "https://github.com/WebAssembly/wasi-logging/archive/d106e59b25297d0496e6a5d221ad090e19c3aaa3.tar.gz"
 sha256 = "4bb4aeab99e7323b30d107aab78e88b2265c1598cc438bc5fbc0d16bb63e798f"

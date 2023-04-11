@@ -37,6 +37,12 @@ enum Command {
         #[arg(short, long)]
         package: Vec<Identifier>,
     },
+    /// Update dependencies
+    Update {
+        /// Optional list of packages to update
+        #[arg(short, long)]
+        package: Vec<Identifier>,
+    },
     /// Write a deterministic tar containing the `wit` subdirectory for a package to stdout
     Tar {
         /// Package to archive
@@ -79,6 +85,11 @@ async fn main() -> anyhow::Result<()> {
             .map(|_| ()),
         Some(Command::Lock { package }) => {
             depit::lock_path(None, manifest_path, lock_path, deps_path, &package)
+                .await
+                .map(|_| ())
+        }
+        Some(Command::Update { package }) => {
+            depit::update_path(None, manifest_path, lock_path, deps_path, &package)
                 .await
                 .map(|_| ())
         }
