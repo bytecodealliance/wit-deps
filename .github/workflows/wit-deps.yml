@@ -140,7 +140,7 @@ jobs:
           <meta charset="utf-8">
           <title>Redirecting to wit-deps/index.html</title>
           <meta http-equiv="refresh" content="0; URL=wit-deps/index.html">
-          <link rel="canonical" href="https://${{ github.repository.owner }}.github.io/wit-deps/wit-deps/index.html">
+          <link rel="canonical" href="https://${{ github.repository.owner }}.github.io/wit-deps/wit_deps/index.html">
         EOF
     - uses: actions/upload-pages-artifact@v1.0.8
       with:
