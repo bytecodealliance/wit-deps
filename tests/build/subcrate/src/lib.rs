@@ -1,3 +1,3 @@
 wit_bindgen::generate!({
-    world: "world",
+    world: "build:subcrate/subcrate",
 });

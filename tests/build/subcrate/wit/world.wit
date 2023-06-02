@@ -1,3 +1,5 @@
-default world subcrate {
-    import foo: build.build.foo
+package build:subcrate
+
+world subcrate {
+    import build:root/foo
 }
