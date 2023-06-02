@@ -182,7 +182,7 @@ async fn copy_wits(
 }
 
 /// Unpacks all WIT interfaces found within `wit` subtree of a tar archive read from `tar` to
-/// `dst` and returns a vector of all unpacked transitive dependency identifiers.
+/// `dst` and returns a [HashMap] of all unpacked transitive dependency identifiers.
 ///
 /// # Errors
 ///
@@ -211,7 +211,7 @@ pub async fn untar(
     async_tar::Archive::new(tar)
         .entries()
         .map_err(|e| Error::new(e.kind(), format!("failed to unpack archive metadata: {e}")))?
-        .try_filter_map(|mut e| async move {
+        .try_fold(HashMap::default(), |mut untared, mut e| async move {
             let path = e
                 .path()
                 .map_err(|e| Error::new(e.kind(), format!("failed to query entry path: {e}")))?;
@@ -229,7 +229,7 @@ pub async fn untar(
                 {
                     let dst = dst.join(name);
                     unpack(&mut e, &dst).await?;
-                    Ok(None)
+                    Ok(untared)
                 }
                 (Some(Some("wit")), Some(Some("deps")), Some(Some(id)), Some(Some(name)), None)
                 | (
@@ -242,18 +242,20 @@ pub async fn untar(
                     let id = Identifier::from(id);
                     if let Some(base) = dst.parent() {
                         let dst = base.join(&id);
-                        recreate_dir(&dst).await?;
+                        if !untared.contains_key(&id) {
+                            recreate_dir(&dst).await?;
+                        }
                         let wit = dst.join(name);
                         unpack(&mut e, &wit).await?;
-                        Ok(Some((id, dst)))
+                        untared.insert(id, dst);
+                        Ok(untared)
                     } else {
-                        Ok(None)
+                        Ok(untared)
                     }
                 }
-                _ => Ok(None),
+                _ => Ok(untared),
             }
         })
-        .try_collect()
         .await
 }
 
