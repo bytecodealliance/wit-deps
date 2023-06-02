@@ -1,7 +1,7 @@
 /// A keyvalue interface that provides atomic operations.
-default interface keyvalue-atomic {
+interface atomic {
 	/// A keyvalue interface that provides atomic operations.
-	use pkg.types.{bucket, error, key}
+	use types.{bucket, error, key}
 
 	/// Atomically increment the value associated with the key in the bucket by the 
 	/// given delta. It returns the new value.

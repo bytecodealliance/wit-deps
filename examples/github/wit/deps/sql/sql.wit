@@ -1,3 +1,0 @@
-default world sql {
-	import readwrite: pkg.readwrite
-}

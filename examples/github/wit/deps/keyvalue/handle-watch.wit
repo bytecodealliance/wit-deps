@@ -1,7 +1,7 @@
 /// A keyvalue interface that provides handle-watch operations.
-default interface handle-watch {
+interface handle-watch {
 	/// A keyvalue interface that provides handle-watch operations.
-	use pkg.types.{bucket, key, incoming-value}
+	use types.{bucket, key, incoming-value}
 
 	/// Handle the set event for the given bucket and key. 
 	/// It returns a incoming-value that can be consumed to get the value.

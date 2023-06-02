@@ -1,8 +1,10 @@
-default interface foo {
+package build:root
+
+interface foo {
     foo: func() -> u32
 }
 
-default world build {
-    import http: http.incoming-handler
-    import logging: logging.logging
+world build {
+    import wasi:http/incoming-handler
+    import wasi:logging/logging
 }

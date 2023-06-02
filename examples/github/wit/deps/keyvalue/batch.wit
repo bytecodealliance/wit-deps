@@ -1,7 +1,7 @@
 /// A keyvalue interface that provides batch operations.
-default interface keyvalue-batch {
+interface batch {
 	/// A keyvalue interface that provides batch get operations.
-	use pkg.types.{bucket, error, key, keys, incoming-value, outgoing-value}
+	use types.{bucket, error, key, keys, incoming-value, outgoing-value}
 
 	/// Get the values associated with the keys in the bucket. It returns a list of
 	/// incoming-values that can be consumed to get the values.

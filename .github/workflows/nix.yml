@@ -43,8 +43,13 @@ jobs:
     - uses: ./.github/actions/install-nix
       with: 
         cachixAuthToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
-    - run: nix build -L .#checks.x86_64-linux.http
-    - run: nix build -L .#checks.x86_64-linux.io
-    - run: nix build -L .#checks.x86_64-linux.logging
-    - run: nix build -L .#checks.x86_64-linux.poll
-    - run: nix build -L .#checks.x86_64-linux.random
+    - run: |
+        nix build -L \
+        .#checks.x86_64-linux.cli \
+        .#checks.x86_64-linux.clocks \
+        .#checks.x86_64-linux.filesystem \
+        .#checks.x86_64-linux.http \
+        .#checks.x86_64-linux.io \
+        .#checks.x86_64-linux.poll \
+        .#checks.x86_64-linux.random \
+        .#checks.x86_64-linux.sockets

@@ -1,2 +1,2 @@
-http = "https://github.com/WebAssembly/wasi-http/archive/6c6855a7329fb040a48ecdbad1765be8e694416c.tar.gz"
-logging = "https://github.com/WebAssembly/wasi-logging/archive/d106e59b25297d0496e6a5d221ad090e19c3aaa3.tar.gz"
+http = "https://github.com/WebAssembly/wasi-http/archive/7071057e3eddae86fe7261e2eb199cf362d58a6e.tar.gz"
+logging = "https://github.com/WebAssembly/wasi-logging/archive/0a6225ba5f3e90cf72fb75a9796e3e92ff006a65.tar.gz"

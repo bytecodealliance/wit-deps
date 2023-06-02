@@ -1,5 +1,5 @@
 // A generic keyvalue interface for WASI.
-default interface types {
+interface types {
 	/// A bucket is a collection of key-value pairs. Each key-value pair is stored
 	/// as a entry in the bucket, and the bucket itself acts as a collection of all
 	/// these entries. 
@@ -27,8 +27,8 @@ default interface types {
 	/// A list of keys
 	type keys = list<key>
 
-	use io.streams.{input-stream, output-stream}
-	use pkg.error.{ error }
+	use wasi:io/streams.{input-stream, output-stream}
+	use wasi-cloud-error.{ error }
 	/// A value is the data stored in a key-value pair. The value can be of any type
 	/// that can be represented in a byte array. It provides a way to write the value
 	/// to the output-stream defined in the `wasi-io` interface.

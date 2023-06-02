@@ -1,3 +1,3 @@
 wit_bindgen::generate!({
-    world: "build",
+    world: "build:root/build",
 });
