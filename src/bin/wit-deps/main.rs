@@ -1,6 +1,7 @@
 #![warn(clippy::pedantic)]
 
 use std::path::PathBuf;
+use std::process::ExitCode;
 
 use anyhow::Context;
 use clap::{Parser, Subcommand};
@@ -32,7 +33,11 @@ struct Cli {
 #[derive(Debug, Subcommand)]
 enum Command {
     /// Lock dependencies
-    Lock,
+    Lock {
+        /// Exit with an error code if dependencies were not already in-sync
+        #[arg(long, short, action)]
+        check: bool,
+    },
     /// Update dependencies
     Update,
     /// Write a deterministic tar containing the `wit` subdirectory for a package to stdout
@@ -47,7 +52,7 @@ enum Command {
 }
 
 #[tokio::main]
-async fn main() -> anyhow::Result<()> {
+async fn main() -> anyhow::Result<ExitCode> {
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::fmt::layer()
@@ -72,12 +77,21 @@ async fn main() -> anyhow::Result<()> {
     } = Cli::parse();
 
     match command {
-        None | Some(Command::Lock) => wit_deps::lock_path(manifest_path, lock_path, deps_path)
+        None => wit_deps::lock_path(manifest_path, lock_path, deps_path)
             .await
-            .map(|_| ()),
+            .map(|_| ExitCode::SUCCESS),
+        Some(Command::Lock { check }) => wit_deps::lock_path(manifest_path, lock_path, deps_path)
+            .await
+            .map(|updated| {
+                if check && updated {
+                    ExitCode::FAILURE
+                } else {
+                    ExitCode::SUCCESS
+                }
+            }),
         Some(Command::Update) => wit_deps::update_path(manifest_path, lock_path, deps_path)
             .await
-            .map(|_| ()),
+            .map(|_| ExitCode::SUCCESS),
         Some(Command::Tar { package, output }) => {
             wit_deps::lock_path(manifest_path, lock_path, &deps_path)
                 .await
@@ -91,7 +105,7 @@ async fn main() -> anyhow::Result<()> {
             } else {
                 wit_deps::tar(package, io::stdout().compat_write()).await?;
             }
-            Ok(())
+            Ok(ExitCode::SUCCESS)
         }
     }
 }
