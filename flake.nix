@@ -221,8 +221,8 @@
             inherit
               pkgs
               ;
-            lock = ./examples/github/wit/deps.lock;
-            manifest = ./examples/github/wit/deps.toml;
+            lock = ./examples/http/wit/deps.lock;
+            manifest = ./examples/http/wit/deps.toml;
           };
       }
       // {
