@@ -143,7 +143,7 @@ jobs:
           <meta http-equiv="refresh" content="0; URL=wit_deps/index.html">
           <link rel="canonical" href="https://${{ github.repository.owner }}.github.io/wit-deps/wit_deps/index.html">
         EOF
-    - uses: actions/upload-pages-artifact@v1.0.9
+    - uses: actions/upload-pages-artifact@v2.0.0
       with:
         path: target/doc
 
