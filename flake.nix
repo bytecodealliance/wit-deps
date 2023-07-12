@@ -15,7 +15,7 @@
   inputs.nix-log.url = github:rvolosatovs/nix-log;
   inputs.nixify.inputs.nix-log.follows = "nix-log";
   inputs.nixify.inputs.nixlib.follows = "nixlib";
-  inputs.nixify.url = github:rvolosatovs/nixify;
+  inputs.nixify.url = github:rvolosatovs/nixify/fix/darwin-linker;
   inputs.nixlib.url = github:nix-community/nixpkgs.lib;
 
   outputs = {
@@ -195,35 +195,21 @@
                 depsBuildBuild
                 ++ optional stdenv.hostPlatform.isDarwin libiconv;
             }
-            // optionalAttrs (craneArgs ? cargoArtifacts) ({
-                buildInputs =
-                  buildInputs
-                  ++ optionals stdenv.hostPlatform.isDarwin [
-                    pkgs.darwin.apple_sdk.frameworks.Security
-                    pkgs.libiconv
-                  ];
+            // optionalAttrs (craneArgs ? cargoArtifacts) {
+              buildInputs =
+                buildInputs
+                ++ optionals stdenv.hostPlatform.isDarwin [
+                  pkgs.darwin.apple_sdk.frameworks.Security
+                  pkgs.libiconv
+                ];
 
-                # only lock deps in non-dep builds
-                preBuild =
-                  preBuild
-                  + ''
-                    ${lock.build-test}
-                  '';
-              }
-              // optionalAttrs (stdenv.hostPlatform.isAarch64 && stdenv.hostPlatform.isDarwin) {
-                preConfigure = ''
-                  export SDKROOT=$(xcrun -sdk macosx --show-sdk-path);
-                  export MACOSX_DEPLOYMENT_TARGET=$(xcrun -sdk macosx --show-sdk-platform-version);
+              # only lock deps in non-dep builds
+              preBuild =
+                preBuild
+                + ''
+                  ${lock.build-test}
                 '';
-
-                CARGO_TARGET_AARCH64_APPLE_DARWIN_LINKER = "/usr/bin/ld";
-
-                AR_aarch64-apple-darwin = "/usr/bin/ar";
-                CC_aarch64-apple-darwin = "/usr/bin/clang";
-                CXX_aarch64-apple-darwin = "/usr/bin/clang++";
-                LD_aarch64-apple-darwin = "/usr/bin/ld";
-                RANLIB_aarch64-apple-darwin = "/usr/bin/ranlib";
-              });
+            };
 
         withChecks = {
           checks,

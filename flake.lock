@@ -170,15 +170,16 @@
         "rust-overlay": "rust-overlay"
       },
       "locked": {
-        "lastModified": 1687779207,
-        "narHash": "sha256-k6ZF8eMdLw0X4pvH0o/i5EZlRejgQh50sv3fn/q7fis=",
+        "lastModified": 1689174466,
+        "narHash": "sha256-3Kofe8hw2KtZ7oUKxw5r+lCvA4I6ewQvH9dIy2qqEs8=",
         "owner": "rvolosatovs",
         "repo": "nixify",
-        "rev": "aaf87ec0cdd7f29f7b3c9afe104ef34511ec919c",
+        "rev": "d08bb8c6d04875ce70009e01de04a389eb3c67e2",
         "type": "github"
       },
       "original": {
         "owner": "rvolosatovs",
+        "ref": "fix/darwin-linker",
         "repo": "nixify",
         "type": "github"
       }
