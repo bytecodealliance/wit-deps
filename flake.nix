@@ -15,7 +15,7 @@
   inputs.nix-log.url = github:rvolosatovs/nix-log;
   inputs.nixify.inputs.nix-log.follows = "nix-log";
   inputs.nixify.inputs.nixlib.follows = "nixlib";
-  inputs.nixify.url = github:rvolosatovs/nixify;
+  inputs.nixify.url = github:rvolosatovs/nixify/fix/darwin-linker;
   inputs.nixlib.url = github:nix-community/nixpkgs.lib;
 
   outputs = {
