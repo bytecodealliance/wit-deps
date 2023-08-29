@@ -169,9 +169,8 @@
           pkgsCross ? pkgs,
           ...
         } @ args: {
-          buildInputs ? [],
-          depsBuildBuild ? [],
           doCheck,
+          buildInputs ? [],
           preBuild ? "",
           ...
         } @ craneArgs:
@@ -191,15 +190,10 @@
                 });
               });
           in
-            {
-              depsBuildBuild =
-                depsBuildBuild
-                ++ optional stdenv.hostPlatform.isDarwin libiconv;
-            }
-            // optionalAttrs (craneArgs ? cargoArtifacts) {
+            optionalAttrs (craneArgs ? cargoArtifacts) {
               buildInputs =
                 buildInputs
-                ++ optionals stdenv.hostPlatform.isDarwin [
+                ++ optionals (pkgs.stdenv.hostPlatform.isDarwin && stdenv.hostPlatform.isDarwin) [
                   pkgs.darwin.apple_sdk.frameworks.Security
                   pkgs.libiconv
                 ];
