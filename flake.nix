@@ -189,14 +189,19 @@
                   doCheck = false;
                 });
               });
+
+            darwin2darwin = pkgs.stdenv.hostPlatform.isDarwin && stdenv.hostPlatform.isDarwin;
+            buildInputs' =
+              buildInputs
+              ++ optional darwin2darwin pkgs.libiconv;
           in
-            optionalAttrs (craneArgs ? cargoArtifacts) {
+            {
+              buildInputs = buildInputs';
+            }
+            // optionalAttrs (craneArgs ? cargoArtifacts) {
               buildInputs =
-                buildInputs
-                ++ optionals (pkgs.stdenv.hostPlatform.isDarwin && stdenv.hostPlatform.isDarwin) [
-                  pkgs.darwin.apple_sdk.frameworks.Security
-                  pkgs.libiconv
-                ];
+                buildInputs'
+                ++ optional darwin2darwin pkgs.darwin.apple_sdk.frameworks.Security;
 
               # only lock deps in non-dep builds
               preBuild =
