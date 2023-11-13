@@ -149,7 +149,7 @@ async fn copy_wits(
                     .try_filter_map(|e| async move {
                         let name = e.file_name();
                         let Some(id) = name.to_str().map(Identifier::from) else {
-                            return Ok(None)
+                            return Ok(None);
                         };
                         if skip_deps.contains(&id) {
                             return Ok(None);
