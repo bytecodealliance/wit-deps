@@ -1,6 +1,6 @@
 [package]
 name = "wit-deps-cli"
-version = "0.3.3"
+version = "0.3.4"
 description = "WIT dependency manager"
 
 authors.workspace = true
