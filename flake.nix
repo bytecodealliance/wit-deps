@@ -201,7 +201,10 @@
             // optionalAttrs (craneArgs ? cargoArtifacts) {
               buildInputs =
                 buildInputs'
-                ++ optional darwin2darwin pkgs.darwin.apple_sdk.frameworks.Security;
+                ++ optionals darwin2darwin [
+                  pkgs.darwin.apple_sdk.frameworks.Security
+                  pkgs.darwin.apple_sdk.frameworks.SystemConfiguration
+                ];
 
               # only lock deps in non-dep builds
               preBuild =
