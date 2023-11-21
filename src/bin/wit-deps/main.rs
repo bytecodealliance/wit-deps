@@ -91,7 +91,7 @@ async fn main() -> anyhow::Result<ExitCode> {
             }),
         Some(Command::Update) => wit_deps::update_path(manifest_path, lock_path, deps_path)
             .await
-            .map(|_| ExitCode::SUCCESS),
+            .map(|()| ExitCode::SUCCESS),
         Some(Command::Tar { package, output }) => {
             wit_deps::lock_path(manifest_path, lock_path, &deps_path)
                 .await
