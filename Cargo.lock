@@ -2312,7 +2312,7 @@ dependencies = [
 
 [[package]]
 name = "wit-deps-cli"
-version = "0.3.4"
+version = "0.3.5"
 dependencies = [
  "anyhow",
  "build-test",
