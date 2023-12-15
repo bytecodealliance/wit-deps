@@ -82,7 +82,7 @@ jobs:
     - run: lipo -create ./wit-deps-aarch64-apple-darwin ./wit-deps-x86_64-apple-darwin -output ./wit-deps-universal-darwin
     - run: chmod +x ./wit-deps-universal-darwin
     - run: ./wit-deps-universal-darwin --version
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v4
       with:
         name: wit-deps-universal-darwin
         path: wit-deps-universal-darwin
