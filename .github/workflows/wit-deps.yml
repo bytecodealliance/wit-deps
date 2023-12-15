@@ -71,10 +71,10 @@ jobs:
     needs: build-bin
     runs-on: macos-12
     steps:
-    - uses: actions/download-artifact@v3
+    - uses: actions/download-artifact@v4
       with:
         name: wit-deps-aarch64-apple-darwin
-    - uses: actions/download-artifact@v3
+    - uses: actions/download-artifact@v4
       with:
         name: wit-deps-x86_64-apple-darwin
     - run: chmod +x ./wit-deps-x86_64-apple-darwin
@@ -174,46 +174,46 @@ jobs:
       contents: write
     steps:
     - uses: actions/checkout@v4
-    - uses: actions/download-artifact@v3
+    - uses: actions/download-artifact@v4
       with:
         name: wit-deps-aarch64-apple-darwin
-    - uses: actions/download-artifact@v3
+    - uses: actions/download-artifact@v4
       with:
         name: wit-deps-aarch64-unknown-linux-musl
-    - uses: actions/download-artifact@v3
+    - uses: actions/download-artifact@v4
       with:
         name: wit-deps-armv7-unknown-linux-musleabihf
-    - uses: actions/download-artifact@v3
+    - uses: actions/download-artifact@v4
       with:
         name: wit-deps-universal-darwin
-    - uses: actions/download-artifact@v3
+    - uses: actions/download-artifact@v4
       with:
         name: wit-deps-x86_64-apple-darwin
-    - uses: actions/download-artifact@v3
+    - uses: actions/download-artifact@v4
       with:
         name: wit-deps-x86_64-pc-windows-gnu
-    - uses: actions/download-artifact@v3
+    - uses: actions/download-artifact@v4
       with:
         name: wit-deps-x86_64-unknown-linux-musl
 
     - run: chmod +x ./wit-deps-*
 
-    - uses: actions/download-artifact@v3
+    - uses: actions/download-artifact@v4
       with:
         name: wit-deps-aarch64-apple-darwin-oci
-    - uses: actions/download-artifact@v3
+    - uses: actions/download-artifact@v4
       with:
         name: wit-deps-aarch64-unknown-linux-musl-oci
-    - uses: actions/download-artifact@v3
+    - uses: actions/download-artifact@v4
       with:
         name: wit-deps-armv7-unknown-linux-musleabihf-oci
-    - uses: actions/download-artifact@v3
+    - uses: actions/download-artifact@v4
       with:
         name: wit-deps-x86_64-pc-windows-gnu-oci
-    - uses: actions/download-artifact@v3
+    - uses: actions/download-artifact@v4
       with:
         name: wit-deps-x86_64-apple-darwin-oci
-    - uses: actions/download-artifact@v3
+    - uses: actions/download-artifact@v4
       with:
         name: wit-deps-x86_64-unknown-linux-musl-oci
 
