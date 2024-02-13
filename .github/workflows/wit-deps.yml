@@ -163,7 +163,7 @@ jobs:
     - run: |
         nix run -L .#build-wit-deps-oci wit-deps
         nix profile install --inputs-from . 'nixpkgs#buildah'
-        buildah manifest push --storage-driver=vfs --all --format 'v2s2' wit-deps docker://ghcr.io/${{ github.repository_owner }}/wit-deps:${{ github.sha }}
+        buildah manifest push --all --format 'v2s2' wit-deps docker://ghcr.io/${{ github.repository_owner }}/wit-deps:${{ github.sha }}
         docker run ghcr.io/${{ github.repository_owner }}/wit-deps:${{ github.sha }} wit-deps --version
 
   release:
