@@ -198,6 +198,7 @@
             {
               buildInputs = buildInputs';
               CARGO_LOG = "trace";
+              IGNORE = "1";
             }
             // optionalAttrs (craneArgs ? cargoArtifacts) {
               buildInputs =
