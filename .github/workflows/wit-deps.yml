@@ -217,7 +217,7 @@ jobs:
       with:
         name: wit-deps-x86_64-unknown-linux-musl-oci
 
-    - uses: softprops/action-gh-release@v1
+    - uses: softprops/action-gh-release@v2
       with:
         draft: true
         prerelease: true
