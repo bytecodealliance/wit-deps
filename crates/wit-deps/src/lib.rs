@@ -36,8 +36,7 @@ pub type Identifier = String;
 fn is_wit(path: impl AsRef<Path>) -> bool {
     path.as_ref()
         .extension()
-        .map(|ext| ext.eq_ignore_ascii_case("wit"))
-        .unwrap_or_default()
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("wit"))
 }
 
 #[instrument(level = "trace", skip(path))]
