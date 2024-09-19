@@ -57,6 +57,13 @@ Note, `wit-deps` assumes that it has full control over `wit/deps` and so it may 
 
 Use `wit-deps` or `wit-deps lock` to populate `wit/deps` using  `wit/deps.toml` manifest and `wit/deps.lock` (will be created if it does not exist)
 
+To you it with a proxy, use the below environment variables:
+```
+export PROXY_SERVER={yourproxyaddress}:{port}
+export PROXY_USERNAME='{yourproxyusername}'
+export PROXY_PASSWORD='{yourproxypassword}'
+```
+
 ## Rust
 
 Use `wit-deps::lock!` macro in `build.rs` of your project to automatically lock your `wit/deps`.

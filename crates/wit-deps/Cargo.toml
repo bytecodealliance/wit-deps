@@ -27,6 +27,7 @@ tokio-util = { workspace = true, features = ["compat"] }
 toml = { workspace = true, features = ["display", "parse", "preserve_order"] }
 tracing = { workspace = true, features = ["attributes"] }
 url = { workspace = true, features = ["serde"] }
+urlencoding = "2.1"
 
 [features]
 default = ["sync"]
