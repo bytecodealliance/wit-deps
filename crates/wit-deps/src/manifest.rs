@@ -10,6 +10,7 @@ use core::ops::Deref;
 use core::str::FromStr;
 
 use std::collections::{HashMap, HashSet};
+use std::env;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -20,9 +21,11 @@ use futures::io::BufReader;
 use futures::lock::Mutex;
 use futures::{stream, AsyncWriteExt, StreamExt, TryStreamExt};
 use hex::FromHex;
+use reqwest::Proxy;
 use serde::{de, Deserialize};
 use tracing::{debug, error, info, instrument, trace, warn};
 use url::Url;
+use urlencoding::encode;
 
 /// WIT dependency [Manifest] entry
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -188,6 +191,20 @@ impl Entry {
         skip_deps: &HashSet<Identifier>,
     ) -> anyhow::Result<(LockEntry, HashMap<Identifier, LockEntry>)> {
         let out = out.as_ref();
+        let proxy_url = env::var("PROXY_SERVER")
+            .ok();
+        let proxy_username = env::var("PROXY_USERNAME")
+            .ok();
+        let proxy_password = env::var("PROXY_PASSWORD").ok();
+        let http_client = if let (Some(proxy_url), Some(proxy_username), Some(proxy_password)) = (proxy_url, proxy_username, proxy_password) {
+            let proxy_with_auth = format!("http://{}:{}@{}", encode(&proxy_username), encode(&proxy_password), proxy_url);
+            reqwest::Client::builder()
+                .proxy(Proxy::all(&proxy_with_auth)?)
+                .build()
+                .expect("failed to create client")
+        } else {
+            reqwest::Client::new()
+        };
 
         match self {
             Self::Path(path) => {
@@ -314,7 +331,8 @@ impl Entry {
                 let (digest, deps) = match url.scheme() {
                     "http" | "https" => {
                         info!("fetch `{url}` into `{}`", out.display());
-                        let res = reqwest::get(url.clone())
+                        
+                        let res = http_client.get(url.clone()).send()
                             .await
                             .context("failed to GET")
                             .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?
