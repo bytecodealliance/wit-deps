@@ -191,13 +191,18 @@ impl Entry {
         skip_deps: &HashSet<Identifier>,
     ) -> anyhow::Result<(LockEntry, HashMap<Identifier, LockEntry>)> {
         let out = out.as_ref();
-        let proxy_url = env::var("PROXY_SERVER")
-            .ok();
-        let proxy_username = env::var("PROXY_USERNAME")
-            .ok();
+        let proxy_url = env::var("PROXY_SERVER").ok();
+        let proxy_username = env::var("PROXY_USERNAME").ok();
         let proxy_password = env::var("PROXY_PASSWORD").ok();
-        let http_client = if let (Some(proxy_url), Some(proxy_username), Some(proxy_password)) = (proxy_url, proxy_username, proxy_password) {
-            let proxy_with_auth = format!("http://{}:{}@{}", encode(&proxy_username), encode(&proxy_password), proxy_url);
+        let http_client = if let (Some(proxy_url), Some(proxy_username), Some(proxy_password)) =
+            (proxy_url, proxy_username, proxy_password)
+        {
+            let proxy_with_auth = format!(
+                "http://{}:{}@{}",
+                encode(&proxy_username),
+                encode(&proxy_password),
+                proxy_url
+            );
             reqwest::Client::builder()
                 .proxy(Proxy::all(&proxy_with_auth)?)
                 .build()
@@ -331,8 +336,10 @@ impl Entry {
                 let (digest, deps) = match url.scheme() {
                     "http" | "https" => {
                         info!("fetch `{url}` into `{}`", out.display());
-                        
-                        let res = http_client.get(url.clone()).send()
+
+                        let res = http_client
+                            .get(url.clone())
+                            .send()
                             .await
                             .context("failed to GET")
                             .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?
