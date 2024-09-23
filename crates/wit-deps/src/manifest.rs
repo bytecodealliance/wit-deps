@@ -204,7 +204,7 @@ impl Entry {
                 proxy_url
             );
             reqwest::Client::builder()
-                .proxy(Proxy::all(&proxy_with_auth)?)
+                .proxy(Proxy::all(proxy_with_auth)?)
                 .build()
                 .expect("failed to create client")
         } else {
