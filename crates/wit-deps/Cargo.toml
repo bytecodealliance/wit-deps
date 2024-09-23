@@ -1,6 +1,6 @@
 [package]
 name = "wit-deps"
-version = "0.3.1"
+version = "0.3.2"
 description = "WIT dependency management"
 readme = "../../README.md"
 
