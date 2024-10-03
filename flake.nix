@@ -154,7 +154,7 @@
         ];
 
         targets.wasm32-unknown-unknown = false;
-        targets.wasm32-wasi = false;
+        targets.wasm32-wasip1 = false;
 
         clippy.allTargets = true;
         clippy.deny = ["warnings"];
