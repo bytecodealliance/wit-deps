@@ -211,10 +211,86 @@ impl Entry {
             reqwest::Client::new()
         };
 
-        match self {
+        let entry = if let Some(LockEntry {
+            source,
+            digest: ldigest,
+            deps: ldeps,
+        }) = lock
+        {
+            let deps = if ldeps.is_empty() {
+                Ok(HashMap::default())
+            } else {
+                let base = out
+                    .parent()
+                    .with_context(|| format!("`{}` does not have a parent", out.display()))?;
+                lock_deps(ldeps.iter().cloned().map(|id| {
+                    let path = base.join(&id);
+                    (id, path)
+                }))
+                .await
+            };
+            match (LockEntry::digest(out).await, source, deps) {
+                (Ok(digest), Some(source), Ok(deps)) if digest == *ldigest => {
+                    // NOTE: Manually deleting transitive dependencies of this
+                    // dependency from `dst` is considered user error
+                    // TODO: Check that transitive dependencies are in sync
+                    match (self, source) {
+                        (Self::Url { url, .. }, LockEntrySource::Url(lurl)) if url == *lurl => {
+                            debug!("`{}` is already up-to-date, skip fetch", out.display());
+                            return Ok((
+                                LockEntry::new(
+                                    Some(LockEntrySource::Url(url)),
+                                    digest,
+                                    deps.keys().cloned().collect(),
+                                ),
+                                deps,
+                            ));
+                        }
+                        (Self::Path(path), LockEntrySource::Path(lpath)) if path == *lpath => {
+                            debug!("`{}` is already up-to-date, skip copy", out.display());
+                            return Ok((
+                                LockEntry::new(
+                                    Some(LockEntrySource::Path(path)),
+                                    digest,
+                                    deps.keys().cloned().collect(),
+                                ),
+                                deps,
+                            ));
+                        }
+                        (entry, _) => {
+                            debug!("source mismatch");
+                            entry
+                        }
+                    }
+                }
+                (Ok(digest), _, _) => {
+                    debug!(
+                        "`{}` is out-of-date (sha256: {})",
+                        out.display(),
+                        hex::encode(digest.sha256)
+                    );
+                    self
+                }
+                (Err(e), _, _) if e.kind() == std::io::ErrorKind::NotFound => {
+                    debug!("locked dependency for `{}` missing", out.display());
+                    self
+                }
+                (Err(e), _, _) => {
+                    error!(
+                        "failed to compute dependency digest for `{}`: {e}",
+                        out.display()
+                    );
+                    self
+                }
+            }
+        } else {
+            self
+        };
+        match entry {
             Self::Path(path) => {
-                let dst = at.map(|at| at.as_ref().join(&path));
-                let deps = copy_wits(&dst.as_ref().unwrap_or(&path), out, skip_deps).await?;
+                let src = at.map(|at| at.as_ref().join(&path));
+                let src = src.as_ref().unwrap_or(&path);
+                let deps = copy_wits(src, out, skip_deps).await?;
                 trace!(?deps, "copied WIT definitions to `{}`", out.display());
                 let deps = lock_deps(deps).await?;
                 trace!(
@@ -222,7 +298,7 @@ impl Entry {
                     "locked transitive dependencies of `{}`",
                     out.display()
                 );
-                let digest = LockEntry::digest(&dst.as_ref().unwrap_or(&path)).await?;
+                let digest = LockEntry::digest(out).await?;
                 Ok((
                     LockEntry::new(
                         Some(LockEntrySource::Path(path)),
@@ -237,56 +313,6 @@ impl Entry {
                 sha256,
                 sha512,
             } => {
-                if let Some(LockEntry {
-                    source,
-                    digest: ldigest,
-                    deps: ldeps,
-                }) = lock
-                {
-                    let deps = if ldeps.is_empty() {
-                        Ok(HashMap::default())
-                    } else {
-                        let base = out.parent().with_context(|| {
-                            format!("`{}` does not have a parent", out.display())
-                        })?;
-                        lock_deps(ldeps.iter().cloned().map(|id| {
-                            let path = base.join(&id);
-                            (id, path)
-                        }))
-                        .await
-                    };
-                    match (LockEntry::digest(out).await, source, deps) {
-                        (Ok(digest), Some(LockEntrySource::Url(lurl)), Ok(deps))
-                            if digest == *ldigest && url == *lurl =>
-                        {
-                            debug!("`{}` is already up-to-date, skip fetch", out.display());
-                            // NOTE: Manually deleting transitive dependencies of this
-                            // dependency from `dst` is considered user error
-                            // TODO: Check that transitive dependencies are in sync
-                            return Ok((
-                                LockEntry::new(
-                                    Some(LockEntrySource::Url(url)),
-                                    digest,
-                                    deps.keys().cloned().collect(),
-                                ),
-                                deps,
-                            ));
-                        }
-                        (Ok(digest), _, _) => {
-                            debug!(
-                                "`{}` is out-of-date (sha256: {})",
-                                out.display(),
-                                hex::encode(digest.sha256)
-                            );
-                        }
-                        (Err(e), _, _) if e.kind() == std::io::ErrorKind::NotFound => {
-                            debug!("locked dependency for `{url}` missing");
-                        }
-                        (Err(e), _, _) => {
-                            error!("failed to compute dependency digest for `{url}`: {e}");
-                        }
-                    }
-                }
                 let cache = if let Some(cache) = cache {
                     match cache.get(&url).await {
                         Err(e) => error!("failed to get `{url}` from cache: {e}"),
