@@ -10,7 +10,7 @@ concurrency:
 
 jobs:
   fmt:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
     - uses: ./.github/actions/install-nix
@@ -19,7 +19,7 @@ jobs:
     - run: nix fmt
 
   run:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
     - uses: ./.github/actions/install-nix
@@ -28,7 +28,7 @@ jobs:
     - run: nix run -L . -- --version
 
   develop:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
     - uses: ./.github/actions/install-nix
@@ -37,7 +37,7 @@ jobs:
     - run: nix develop -L --ignore-environment -c cargo tree
 
   check:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
     - uses: ./.github/actions/install-nix
