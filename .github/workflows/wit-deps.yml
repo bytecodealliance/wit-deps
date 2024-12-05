@@ -50,7 +50,7 @@ jobs:
             docker run --rm wit-deps:$(nix eval --raw .#wit-deps-x86_64-unknown-linux-musl-oci.imageTag) wit-deps --version
 
     name: wit-deps-${{ matrix.config.target }}
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
     - uses: ./.github/actions/install-nix
@@ -69,7 +69,7 @@ jobs:
   build-lipo:
     name: wit-deps-universal-darwin
     needs: build-bin
-    runs-on: macos-12
+    runs-on: macos-latest
     steps:
     - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
       with:
@@ -77,8 +77,8 @@ jobs:
     - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
       with:
         name: wit-deps-x86_64-apple-darwin
-    - run: chmod +x ./wit-deps-x86_64-apple-darwin
-    - run: ./wit-deps-x86_64-apple-darwin --version
+    - run: chmod +x ./wit-deps-aarch64-apple-darwin
+    - run: ./wit-deps-aarch64-apple-darwin --version
     - run: lipo -create ./wit-deps-aarch64-apple-darwin ./wit-deps-x86_64-apple-darwin -output ./wit-deps-universal-darwin
     - run: chmod +x ./wit-deps-universal-darwin
     - run: ./wit-deps-universal-darwin --version
@@ -98,7 +98,7 @@ jobs:
         - nextest
 
     name: cargo ${{ matrix.check }}
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
     - uses: ./.github/actions/install-nix
@@ -107,7 +107,7 @@ jobs:
     - run: nix build -L .#checks.x86_64-linux.${{ matrix.check }}
 
   build-doc:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
     - uses: ./.github/actions/install-nix
@@ -132,7 +132,7 @@ jobs:
         path: doc
 
   deploy-doc:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     needs: build-doc
     permissions:
       pages: write
@@ -146,7 +146,7 @@ jobs:
       id: deployment
 
   oci:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     if: ${{ github.event_name != 'pull_request' }}
     needs: build-bin
     permissions:
