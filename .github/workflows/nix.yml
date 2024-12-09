@@ -16,7 +16,7 @@ jobs:
     - uses: ./.github/actions/install-nix
       with: 
         cachixAuthToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
-    - run: nix fmt
+    - run: nix fmt -L **/*.nix
 
   run:
     runs-on: ubuntu-latest
