@@ -32,7 +32,3 @@ urlencoding = { workspace = true }
 [features]
 default = ["sync"]
 sync = ["tokio/rt-multi-thread"]
-
-[target.'cfg(windows)'.dependencies]
-# Required for https://github.com/dignifiedquire/async-tar/pull/35
-async-std = { workspace = true, features = ["unstable"] }
