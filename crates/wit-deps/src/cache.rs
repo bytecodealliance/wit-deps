@@ -20,10 +20,10 @@ pub trait Cache {
     /// Type returned by the [Self::insert] method
     type Write: AsyncWrite + Unpin;
 
-    /// Returns an read handle for the entry from the cache associated with a given url
+    /// Returns a read handle for the entry from the cache associated with a given URL
     async fn get(&self, url: &Url) -> anyhow::Result<Option<Self::Read>>;
 
-    /// Returns a write handle for the entry associated with a given url
+    /// Returns a write handle for the entry associated with a given URL
     async fn insert(&self, url: &Url) -> anyhow::Result<Self::Write>;
 }
 
