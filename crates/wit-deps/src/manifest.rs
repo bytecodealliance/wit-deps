@@ -24,7 +24,6 @@ use hex::FromHex;
 use serde::{de, Deserialize};
 use tracing::{debug, error, info, instrument, trace, warn};
 use url::Url;
-use urlencoding::encode;
 
 /// WIT dependency [Manifest] entry
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -219,8 +218,8 @@ impl Entry {
         {
             let proxy_with_auth = format!(
                 "http://{}:{}@{}",
-                encode(&proxy_username),
-                encode(&proxy_password),
+                urlencoding::encode(&proxy_username),
+                urlencoding::encode(&proxy_password),
                 proxy_url
             );
             let proxy = reqwest::Proxy::all(proxy_with_auth)
