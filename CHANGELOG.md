@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2024-01-16
+
+### Added
+
+- URL dependencies now have support for `subdir` attribute, which overrides the default of `wit`.
+  This feature is particularly useful for working with wasip3 draft packages
+
 ## [0.3.0] - 2023-04-11
 
 ### Added
@@ -47,7 +54,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial `wit-deps` library and binary implementations
 
-[unreleased]: https://github.com/bytecodealliance/wit-deps/compare/v0.3.0...HEAD
+[unreleased]: https://github.com/bytecodealliance/wit-deps/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/bytecodealliance/wit-deps/releases/tag/v0.5.0
 [0.3.0]: https://github.com/bytecodealliance/wit-deps/releases/tag/v0.3.0
 [0.2.2]: https://github.com/bytecodealliance/wit-deps/releases/tag/v0.2.2
 [0.2.1]: https://github.com/bytecodealliance/wit-deps/releases/tag/v0.2.1
