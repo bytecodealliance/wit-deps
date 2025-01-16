@@ -55,5 +55,6 @@ toml = { version = "0.7", default-features = false }
 tracing = { version = "0.1", default-features = false }
 tracing-subscriber = { version = "0.3", default-features = false }
 url = { version = "2", default-features = false }
+urlencoding = { version = "2.1", default-features = false }
 wit-bindgen = { version = "0.37", default-features = false }
 wit-deps = { path = "./crates/wit-deps", version = "0.5" }

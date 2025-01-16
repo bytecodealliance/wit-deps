@@ -27,13 +27,11 @@ tokio-util = { workspace = true, features = ["compat"] }
 toml = { workspace = true, features = ["display", "parse", "preserve_order"] }
 tracing = { workspace = true, features = ["attributes"] }
 url = { workspace = true, features = ["serde"] }
-urlencoding = "2.1"
+urlencoding = { workspace = true }
 
 [features]
 default = ["sync"]
-sync = [
-    "tokio/rt-multi-thread"
-]
+sync = ["tokio/rt-multi-thread"]
 
 [target.'cfg(windows)'.dependencies]
 # Required for https://github.com/dignifiedquire/async-tar/pull/35
