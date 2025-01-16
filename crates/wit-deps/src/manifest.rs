@@ -21,7 +21,6 @@ use futures::io::BufReader;
 use futures::lock::Mutex;
 use futures::{stream, AsyncWriteExt, StreamExt, TryStreamExt};
 use hex::FromHex;
-use reqwest::Proxy;
 use serde::{de, Deserialize};
 use tracing::{debug, error, info, instrument, trace, warn};
 use url::Url;
@@ -224,10 +223,12 @@ impl Entry {
                 encode(&proxy_password),
                 proxy_url
             );
+            let proxy = reqwest::Proxy::all(proxy_with_auth)
+                .context("failed to construct HTTP proxy configuration")?;
             reqwest::Client::builder()
-                .proxy(Proxy::all(proxy_with_auth)?)
+                .proxy(proxy)
                 .build()
-                .expect("failed to create client")
+                .context("failed to create HTTP client")?
         } else {
             reqwest::Client::new()
         };
