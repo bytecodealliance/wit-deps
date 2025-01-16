@@ -1,11 +1,19 @@
-package wasi:sockets
+package wasi:sockets@0.2.3;
 
-world example-world {
-    import instance-network
-    import network
-    import udp
-    import udp-create-socket
-    import tcp
-    import tcp-create-socket
-    import ip-name-lookup
+@since(version = 0.2.0)
+world imports {
+    @since(version = 0.2.0)
+    import instance-network;
+    @since(version = 0.2.0)
+    import network;
+    @since(version = 0.2.0)
+    import udp;
+    @since(version = 0.2.0)
+    import udp-create-socket;
+    @since(version = 0.2.0)
+    import tcp;
+    @since(version = 0.2.0)
+    import tcp-create-socket;
+    @since(version = 0.2.0)
+    import ip-name-lookup;
 }

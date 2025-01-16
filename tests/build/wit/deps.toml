@@ -1,2 +1,3 @@
-http = "https://github.com/WebAssembly/wasi-http/archive/7071057e3eddae86fe7261e2eb199cf362d58a6e.tar.gz"
-logging = "https://github.com/WebAssembly/wasi-logging/archive/0a6225ba5f3e90cf72fb75a9796e3e92ff006a65.tar.gz"
+http = "https://github.com/WebAssembly/wasi-http/archive/8eb7f8a6525c19fde576f9f6acc5b2a25d4f5df5.tar.gz"
+logging = "https://github.com/WebAssembly/wasi-logging/archive/d31c41d0d9eed81aabe02333d0025d42acf3fb75.tar.gz"
+clocks-0-3-0 = { url = "https://github.com/WebAssembly/wasi-clocks/archive/3850f9dfda730d4eab51610caf76c8ef3b31cf14.tar.gz", subdir = "wit-0.3.0-draft" }

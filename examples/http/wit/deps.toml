@@ -1,1 +1,1 @@
-http = "https://github.com/WebAssembly/wasi-http/archive/7071057e3eddae86fe7261e2eb199cf362d58a6e.tar.gz"
+http = "https://github.com/WebAssembly/wasi-http/archive/v0.2.3.tar.gz"

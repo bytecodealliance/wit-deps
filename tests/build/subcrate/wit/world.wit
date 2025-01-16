@@ -1,5 +1,5 @@
-package build:subcrate
+package build:subcrate;
 
 world subcrate {
-    import build:root/foo
+    import build:root/foo;
 }

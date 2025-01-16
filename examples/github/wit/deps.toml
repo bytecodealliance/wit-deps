@@ -5,6 +5,6 @@ sockets = "https://github.com/WebAssembly/wasi-sockets/archive/main.tar.gz"
 
 # Pin a dependency to a particular revision and source digests. Each digest is optional
 [keyvalue]
-url = "https://github.com/WebAssembly/wasi-keyvalue/archive/ceb38717cf6d90c3d4e9cc3af4b20259b6eed5e9.tar.gz"
-sha256 = "9a9c118655765ca9ff0bc74c20a9e7d9530dc5f1243338b3646ce27be00c12cf"
-sha512 = "d8f8047fa280450c063c8b595e3d79c98eca9dba3913395ba3bff0aa110773248039795f95ff215c8440cfcad17f0025a23ffc1a552b8f817f8254309a334fa8"
+url = "https://github.com/WebAssembly/wasi-keyvalue/archive/v0.2.0-draft.tar.gz"
+sha256 = "8698bc1d8b4764674b753bb880ea584f453bdadb79fc676ced9eebd1c3d91fd9"
+sha512 = "38b9033c581f6e6c5ee1cbceff8fb2167847b46726e8b04b10ae66c97ae592fb2eb585f722efd9d07419651ec21d96fbcc313f156d20734f2fc3e273ba2815ac"
