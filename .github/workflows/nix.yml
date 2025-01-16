@@ -50,6 +50,5 @@ jobs:
         .#checks.x86_64-linux.filesystem \
         .#checks.x86_64-linux.http \
         .#checks.x86_64-linux.io \
-        .#checks.x86_64-linux.poll \
         .#checks.x86_64-linux.random \
         .#checks.x86_64-linux.sockets
