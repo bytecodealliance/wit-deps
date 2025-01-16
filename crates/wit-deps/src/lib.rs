@@ -191,6 +191,7 @@ pub async fn untar(
     tar: impl AsyncRead + Unpin,
     dst: impl AsRef<Path>,
     skip_deps: &HashSet<Identifier>,
+    subdir: &str,
 ) -> std::io::Result<HashMap<Identifier, PathBuf>> {
     use std::io::{Error, Result};
 
@@ -222,22 +223,48 @@ pub async fn untar(
                 path.next(),
                 path.next(),
             ) {
-                (Some(Some("wit")), Some(Some(name)), None, None, None)
-                | (Some(_), Some(Some("wit")), Some(Some(name)), None, None)
-                    if is_wit(name) =>
+                (Some(Some(name)), None, None, None, None)
+                | (Some(_), Some(Some(name)), None, None, None)
+                    if is_wit(name) && subdir.is_empty() =>
                 {
                     let dst = dst.join(name);
                     unpack(&mut e, &dst).await?;
                     Ok(untared)
                 }
-                (Some(Some("wit")), Some(Some("deps")), Some(Some(id)), Some(Some(name)), None)
+                (Some(Some(dir)), Some(Some(name)), None, None, None)
+                | (Some(_), Some(Some(dir)), Some(Some(name)), None, None)
+                    if is_wit(name) && dir == subdir =>
+                {
+                    let dst = dst.join(name);
+                    unpack(&mut e, &dst).await?;
+                    Ok(untared)
+                }
+                (Some(Some("deps")), Some(Some(id)), Some(Some(name)), None, None)
+                | (Some(_), Some(Some("deps")), Some(Some(id)), Some(Some(name)), None)
+                    if !skip_deps.contains(id) && is_wit(name) && subdir.is_empty() =>
+                {
+                    let id = Identifier::from(id);
+                    if let Some(base) = dst.parent() {
+                        let dst = base.join(&id);
+                        if !untared.contains_key(&id) {
+                            recreate_dir(&dst).await?;
+                        }
+                        let wit = dst.join(name);
+                        unpack(&mut e, &wit).await?;
+                        untared.insert(id, dst);
+                        Ok(untared)
+                    } else {
+                        Ok(untared)
+                    }
+                }
+                (Some(Some(dir)), Some(Some("deps")), Some(Some(id)), Some(Some(name)), None)
                 | (
                     Some(_),
-                    Some(Some("wit")),
+                    Some(Some(dir)),
                     Some(Some("deps")),
                     Some(Some(id)),
                     Some(Some(name)),
-                ) if !skip_deps.contains(id) && is_wit(name) => {
+                ) if !skip_deps.contains(id) && is_wit(name) && dir == subdir => {
                     let id = Identifier::from(id);
                     if let Some(base) = dst.parent() {
                         let dst = base.join(&id);

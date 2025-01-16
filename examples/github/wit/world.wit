@@ -1,8 +1,8 @@
-package examples:github
+package examples:github;
 
 world github {
-    import wasi:clocks/monotonic-clock
-    import wasi:http/incoming-handler
-    import wasi:sockets/network
-    import wasi:keyvalue/readwrite
+    import wasi:clocks/monotonic-clock@0.2.3;
+    import wasi:http/incoming-handler@0.2.3;
+    import wasi:sockets/network@0.2.3;
+    import wasi:keyvalue/store@0.2.0-draft;
 }

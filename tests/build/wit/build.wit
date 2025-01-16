@@ -1,10 +1,10 @@
-package build:root
+package build:root;
 
 interface foo {
-    foo: func() -> u32
+    foo: func() -> u32;
 }
 
 world build {
-    import wasi:http/incoming-handler
-    import wasi:logging/logging
+    import wasi:http/incoming-handler@0.2.3;
+    import wasi:logging/logging@0.1.0-draft;
 }
