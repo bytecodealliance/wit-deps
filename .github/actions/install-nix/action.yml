@@ -11,7 +11,7 @@ runs:
     with:
       extra-conf: |
         accept-flake-config = true
-  - uses: DeterminateSystems/magic-nix-cache-action@v8
+  - uses: DeterminateSystems/magic-nix-cache-action@v9
   - uses: cachix/cachix-action@v15
     continue-on-error: true
     with:
