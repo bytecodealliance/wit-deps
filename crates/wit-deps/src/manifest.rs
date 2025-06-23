@@ -246,7 +246,7 @@ impl Entry {
                     .with_context(|| format!("`{}` does not have a parent", out.display()))?;
                 lock_deps(ldeps.iter().cloned().map(|id| {
                     // Sanitize dependency name for filesystem compatibility
-                    let sanitized_id = id.replace(":", "_");
+                    let sanitized_id = id.replace(":", "-");
                     let path = base.join(&sanitized_id);
                     (id, path)
                 }))
