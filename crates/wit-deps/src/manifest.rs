@@ -245,7 +245,10 @@ impl Entry {
                     .parent()
                     .with_context(|| format!("`{}` does not have a parent", out.display()))?;
                 lock_deps(ldeps.iter().cloned().map(|id| {
-                    // Sanitize dependency name for filesystem compatibility
+                    // Sanitize dependency name for filesystem compatibility.
+                    // WIT identifiers must be kebab-case (words separated by '-') and cannot contain underscores or other punctuation.
+                    // See: https://component-model.bytecodealliance.org/design/wit.html#identifiers
+                    // We use '-' as the separator to match WIT spec and ensure Windows compatibility.
                     let sanitized_id = id.replace(':', "-");
                     let path = base.join(&sanitized_id);
                     (id, path)
