@@ -52,7 +52,7 @@ jobs:
     name: wit-deps-${{ matrix.config.target }}
     runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - uses: ./.github/actions/install-nix
       with: 
         cachixAuthToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
@@ -100,7 +100,7 @@ jobs:
     name: cargo ${{ matrix.check }}
     runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - uses: ./.github/actions/install-nix
       with: 
         cachixAuthToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
@@ -109,7 +109,7 @@ jobs:
   build-doc:
     runs-on: ubuntu-24.04
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - uses: ./.github/actions/install-nix
       with: 
         cachixAuthToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
@@ -152,7 +152,7 @@ jobs:
     permissions:
       packages: write
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - uses: ./.github/actions/install-nix
       with: 
         cachixAuthToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
@@ -174,7 +174,7 @@ jobs:
     permissions:
       contents: write
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5.0.0
       with:
         name: wit-deps-aarch64-apple-darwin
