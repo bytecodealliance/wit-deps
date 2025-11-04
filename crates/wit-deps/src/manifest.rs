@@ -182,8 +182,8 @@ fn source_matches(
     sha512: Option<[u8; 64]>,
 ) -> bool {
     let digest = digest.into();
-    sha256.map_or(true, |sha256| sha256 == digest.sha256)
-        && sha512.map_or(true, |sha512| sha512 == digest.sha512)
+    sha256.is_none_or(|sha256| sha256 == digest.sha256)
+        && sha512.is_none_or(|sha512| sha512 == digest.sha512)
 }
 
 #[instrument(level = "trace", skip(deps))]
@@ -382,11 +382,7 @@ impl Entry {
                             }
                         }
                     }
-                    if let Ok(cache) = cache.insert(&url).await {
-                        Some(cache)
-                    } else {
-                        None
-                    }
+                    cache.insert(&url).await.ok()
                 } else {
                     None
                 };
@@ -400,13 +396,13 @@ impl Entry {
                             .send()
                             .await
                             .context("failed to GET")
-                            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?
+                            .map_err(std::io::Error::other)?
                             .error_for_status()
                             .context("GET request failed")
-                            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+                            .map_err(std::io::Error::other)?;
                         let tar_gz = res
                             .bytes_stream()
-                            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
+                            .map_err(std::io::Error::other)
                             .then(|chunk| async {
                                 let chunk = chunk?;
                                 let mut cache = cache.lock().await;
@@ -464,9 +460,9 @@ path = "/path/to/my/dep"
                     if digest.sha256 != sha256 {
                         remove_dir_all(out).await?;
                         bail!(
-                            r#"sha256 hash mismatch for `{url}`
+                            r"sha256 hash mismatch for `{url}`
 got: {}
-expected: {}"#,
+expected: {}",
                             hex::encode(digest.sha256),
                             hex::encode(sha256),
                         );
@@ -476,9 +472,9 @@ expected: {}"#,
                     if digest.sha512 != sha512 {
                         remove_dir_all(out).await?;
                         bail!(
-                            r#"sha512 hash mismatch for `{url}`
+                            r"sha512 hash mismatch for `{url}`
 got: {}
-expected: {}"#,
+expected: {}",
                             hex::encode(digest.sha512),
                             hex::encode(sha512),
                         );
