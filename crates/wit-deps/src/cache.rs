@@ -15,9 +15,9 @@ use url::{Host, Url};
 /// Resource caching layer
 #[async_trait]
 pub trait Cache {
-    /// Type returned by the [Self::get] method
+    /// Type returned by the [`Self::get`] method
     type Read: AsyncBufRead + Unpin;
-    /// Type returned by the [Self::insert] method
+    /// Type returned by the [`Self::insert`] method
     type Write: AsyncWrite + Unpin;
 
     /// Returns a read handle for the entry from the cache associated with a given URL

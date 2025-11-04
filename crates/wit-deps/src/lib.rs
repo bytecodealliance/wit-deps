@@ -61,7 +61,7 @@ async fn recreate_dir(path: impl AsRef<Path>) -> std::io::Result<()> {
         Ok(()) => {}
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
         Err(e) => return Err(e),
-    };
+    }
     fs::create_dir_all(path)
         .await
         .map(|()| trace!("recreated `{}`", path.display()))
@@ -181,7 +181,7 @@ async fn copy_wits(
 }
 
 /// Unpacks all WIT interfaces found within `wit` subtree of a tar archive read from `tar` to
-/// `dst` and returns a [HashMap] of all unpacked transitive dependency identifiers.
+/// `dst` and returns a [`HashMap`] of all unpacked transitive dependency identifiers.
 ///
 /// # Errors
 ///
