@@ -1,7 +1,6 @@
 //! WIT dependency management core library
 
 #![forbid(clippy::unwrap_used)]
-#![warn(clippy::pedantic)]
 #![warn(missing_docs)]
 
 mod cache;

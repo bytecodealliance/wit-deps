@@ -82,7 +82,7 @@ impl Serialize for Digest {
 
 /// A reader wrapper, which hashes the bytes read
 pub struct Reader<T> {
-    reader: T,
+    inner: T,
     sha256: Sha256,
     sha512: Sha512,
 }
@@ -93,7 +93,7 @@ impl<T: AsyncRead + Unpin> AsyncRead for Reader<T> {
         cx: &mut Context<'_>,
         buf: &mut [u8],
     ) -> Poll<std::io::Result<usize>> {
-        Pin::new(&mut self.reader).poll_read(cx, buf).map_ok(|n| {
+        Pin::new(&mut self.inner).poll_read(cx, buf).map_ok(|n| {
             self.sha256.update(&buf[..n]);
             self.sha512.update(&buf[..n]);
             n
@@ -102,9 +102,9 @@ impl<T: AsyncRead + Unpin> AsyncRead for Reader<T> {
 }
 
 impl<T> From<T> for Reader<T> {
-    fn from(reader: T) -> Self {
+    fn from(inner: T) -> Self {
         Self {
-            reader,
+            inner,
             sha256: Sha256::new(),
             sha512: Sha512::new(),
         }
@@ -121,7 +121,7 @@ impl<T> From<Reader<T>> for Digest {
 
 /// A writer wrapper, which hashes the bytes written
 pub struct Writer<T> {
-    writer: T,
+    inner: T,
     sha256: Sha256,
     sha512: Sha512,
 }
@@ -132,7 +132,7 @@ impl<T: AsyncWrite + Unpin> AsyncWrite for Writer<T> {
         cx: &mut Context<'_>,
         buf: &[u8],
     ) -> Poll<std::io::Result<usize>> {
-        Pin::new(&mut self.writer).poll_write(cx, buf).map_ok(|n| {
+        Pin::new(&mut self.inner).poll_write(cx, buf).map_ok(|n| {
             self.sha256.update(&buf[..n]);
             self.sha512.update(&buf[..n]);
             n
@@ -140,18 +140,18 @@ impl<T: AsyncWrite + Unpin> AsyncWrite for Writer<T> {
     }
 
     fn poll_flush(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
-        Pin::new(&mut self.writer).poll_flush(cx)
+        Pin::new(&mut self.inner).poll_flush(cx)
     }
 
     fn poll_close(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
-        Pin::new(&mut self.writer).poll_close(cx)
+        Pin::new(&mut self.inner).poll_close(cx)
     }
 }
 
 impl<T> From<T> for Writer<T> {
-    fn from(writer: T) -> Self {
+    fn from(inner: T) -> Self {
         Self {
-            writer,
+            inner,
             sha256: Sha256::new(),
             sha512: Sha512::new(),
         }
