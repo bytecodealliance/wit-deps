@@ -28,6 +28,7 @@
   inputs.nixify.inputs.nixlib.follows = "nixlib";
   inputs.nixify.url = "github:rvolosatovs/nixify";
   inputs.nixlib.url = "github:nix-community/nixpkgs.lib";
+  inputs.nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
 
   outputs = {
     self,

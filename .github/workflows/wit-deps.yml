@@ -16,7 +16,9 @@ jobs:
         config:
         - target: aarch64-unknown-linux-musl
           install-path: /bin/wit-deps
-          test-bin: nix shell --inputs-from . 'nixpkgs#qemu' -c qemu-aarch64 ./result/bin/wit-deps --version
+          test-bin: |
+            nix profile install --inputs-from . 'nixpkgs-unstable#qemu'
+            qemu-aarch64 ./result/bin/wit-deps --version
           test-oci: docker load < ./result
           # TODO: Run aarch64 binary within OCI
 
@@ -27,7 +29,9 @@ jobs:
 
         - target: armv7-unknown-linux-musleabihf
           install-path: /bin/wit-deps
-          test-bin: nix shell --inputs-from . 'nixpkgs#qemu' -c qemu-arm ./result/bin/wit-deps --version
+          test-bin: |
+            nix profile install --inputs-from . 'nixpkgs-unstable#qemu'
+            qemu-arm ./result/bin/wit-deps --version
           test-oci: docker load < ./result
           # TODO: Run armv7 binary within OCI
 
@@ -38,7 +42,9 @@ jobs:
 
         - target: x86_64-pc-windows-gnu
           install-path: /bin/wit-deps.exe
-          test-bin: nix shell --inputs-from . 'nixpkgs#wine64' -c wine64 ./result/bin/wit-deps.exe --version
+          test-bin: |
+            nix profile install --inputs-from . 'nixpkgs-unstable#wine64'
+            wine64 ./result/bin/wit-deps.exe --version
           test-oci: docker load < ./result
           # TODO: Run windows binary within OCI
 
@@ -146,30 +152,78 @@ jobs:
       id: deployment
 
   oci:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     if: ${{ github.event_name != 'pull_request' }}
     needs: build-bin
     permissions:
       packages: write
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
     - uses: ./.github/actions/install-nix
       with: 
         cachixAuthToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
-    - uses: docker/login-action@v3
+
+    - name: Extract tag context
+      id: ctx
+      run: |
+        echo "owner=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
+        echo "sha_short=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
+        version=${GITHUB_REF_NAME#v}
+        echo "version=${version}" >> "$GITHUB_OUTPUT"
+        echo "version is ${version}"
+        if [[ $version == *"-"* ]]; then
+          echo "version ${version} is a pre-release"
+          echo "prerelease=true" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3.6.0
       with:
         registry: ghcr.io
         username: ${{ github.repository_owner }}
         password: ${{ secrets.GITHUB_TOKEN }}
-    - run: |
-        nix run -L .#build-wit-deps-oci wit-deps
-        nix profile install --inputs-from . 'nixpkgs#buildah'
-        buildah manifest push --all --format 'v2s2' wit-deps docker://ghcr.io/${{ github.repository_owner }}/wit-deps:${{ github.sha }}
-        docker run ghcr.io/${{ github.repository_owner }}/wit-deps:${{ github.sha }} wit-deps --version
+
+    - name: Install `skopeo`
+      run: nix profile install --inputs-from . 'nixpkgs-unstable#skopeo'
+
+    - name: Build image
+      run: nix build -L .#wit-deps-oci
+
+    - name: Test image
+      run: |
+        skopeo copy oci-archive:./result docker-daemon:wit-deps:test
+        docker run --rm wit-deps:test wit-deps --version
+
+    - name: Push commit rev tag
+      if: startswith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main'
+      run: |
+        skopeo copy --all oci-archive:./result docker://ghcr.io/${{ steps.ctx.outputs.owner }}/wit-deps:${{ github.sha }}
+        skopeo copy --all oci-archive:./result docker://ghcr.io/${{ steps.ctx.outputs.owner }}/wit-deps:${{ steps.ctx.outputs.sha_short }}
+
+        docker run --rm ghcr.io/${{ steps.ctx.outputs.owner }}/wit-deps:${{ github.sha }} wit-deps --version
+        docker run --rm ghcr.io/${{ steps.ctx.outputs.owner }}/wit-deps:${{ steps.ctx.outputs.sha_short }} wit-deps --version
+
+    - name: Push version tag
+      if: startswith(github.ref, 'refs/tags/v')
+      run: |
+        skopeo copy --all oci-archive:./result docker://ghcr.io/${{ steps.ctx.outputs.owner }}/wit-deps:${{ steps.ctx.outputs.version }}
+        docker run --rm ghcr.io/${{ steps.ctx.outputs.owner }}/wit-deps:${{ steps.ctx.outputs.version }} wit-deps --version
+
+    - name: Push `latest` tag
+      if: startswith(github.ref, 'refs/tags/v') && !steps.ctx.outputs.prerelease
+      run: |
+        skopeo copy --all oci-archive:./result docker://ghcr.io/${{ steps.ctx.outputs.owner }}/wit-deps:latest
+        docker run --rm ghcr.io/${{ steps.ctx.outputs.owner }}/wit-deps:latest wit-deps --version
 
   release:
-    if: startsWith(github.ref, 'refs/tags/') && github.event_name == 'push'
-    needs: [ build-bin, build-lipo, build-doc, cargo ]
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs:
+      - build-bin
+      - build-doc
+      - build-lipo
+      - cargo
+      - oci
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -218,7 +272,7 @@ jobs:
       with:
         name: wit-deps-x86_64-unknown-linux-musl-oci
 
-    - uses: softprops/action-gh-release@v2
+    - uses: softprops/action-gh-release@6da8fa9354ddfdc4aeace5fc48d7f679b5214090 # v2.4.1
       with:
         draft: true
         prerelease: true
