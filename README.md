@@ -18,7 +18,7 @@ sockets = "https://github.com/WebAssembly/wasi-sockets/archive/main.tar.gz"
 sql = "https://github.com/WebAssembly/wasi-sql/archive/main.tar.gz"
 
 # Pin to a tag
-io = "https://github.com/rvolosatovs/wasi-io/archive/v0.1.0.tar.gz" # this fork renames `streams` interface for compatiblity with wasi-snapshot-preview1
+io = "https://github.com/rvolosatovs/wasi-io/archive/v0.1.0.tar.gz" # this fork renames `streams` interface for compatibility with wasi-snapshot-preview1
 
 # Pin a dependency to a particular revision and source digests. Each digest is optional
 [keyvalue]
@@ -28,7 +28,7 @@ sha512 = "7bc43665a9de73ec7bef075e32f67ed0ebab04a1e47879f9328e8e52edfb35359512c8
 
 ```
 
-A source specfication can also be a structure with the following fields:
+A source specification can also be a structure with the following fields:
 
 - `url` - same format as the URL string
 - `sha256` - (optional) hex-encoded sha256 digest of the contents of the URL
