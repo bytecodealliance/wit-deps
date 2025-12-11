@@ -9,6 +9,17 @@ edition.workspace = true
 license.workspace = true
 repository.workspace = true
 
+[package.metadata.binstall]
+pkg-url = "{repo}/releases/download/v{version}/wit-deps-{target-arch}-{target-vendor}-{target-family}-musl"
+pkg-fmt = "bin"
+[package.metadata.binstall.overrides.aarch64-apple-darwin]
+pkg-url = "{repo}/releases/download/v{version}/wit-deps-{target-arch}-{target-vendor}-{target-family}"
+[package.metadata.binstall.overrides.x86_64-apple-darwin]
+pkg-url = "{repo}/releases/download/v{version}/wit-deps-{target-arch}-{target-vendor}-{target-family}"
+[package.metadata.binstall.overrides.x86_64-pc-windows-msvc]
+# GNU toolchain should work on windows MSVC targets
+pkg-url = "{repo}/releases/download/v{version}/wit-deps-{target-arch}-{target-vendor}-{target-family}-gnu"
+
 [workspace.package]
 authors = ["Roman Volosatovs"]
 categories = ["wasm"]
