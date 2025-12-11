@@ -10,12 +10,14 @@ license.workspace = true
 repository.workspace = true
 
 [package.metadata.binstall]
-pkg-url = "{repo}/releases/download/v{version}/wit-deps-{target-arch}-{target-vendor}-{target-family}-musl"
+pkg-url = "{repo}/releases/download/v{version}/wit-deps-{target}"
 pkg-fmt = "bin"
-[package.metadata.binstall.overrides.aarch64-apple-darwin]
-pkg-url = "{repo}/releases/download/v{version}/wit-deps-{target-arch}-{target-vendor}-{target-family}"
-[package.metadata.binstall.overrides.x86_64-apple-darwin]
-pkg-url = "{repo}/releases/download/v{version}/wit-deps-{target-arch}-{target-vendor}-{target-family}"
+[package.metadata.binstall.overrides.aarch64-unknown-linux-gnu]
+pkg-url = "{repo}/releases/download/v{version}/wit-deps-{target-arch}-{target-vendor}-{target-family}-musl"
+[package.metadata.binstall.overrides.x86_64-unknown-linux-gnu]
+pkg-url = "{repo}/releases/download/v{version}/wit-deps-{target-arch}-{target-vendor}-{target-family}-musl"
+[package.metadata.binstall.overrides.armv7-unknown-linux-gnu]
+pkg-url = "{repo}/releases/download/v{version}/wit-deps-{target-arch}-{target-vendor}-{target-family}-musleabihf"
 [package.metadata.binstall.overrides.x86_64-pc-windows-msvc]
 # GNU toolchain should work on windows MSVC targets
 pkg-url = "{repo}/releases/download/v{version}/wit-deps-{target-arch}-{target-vendor}-{target-family}-gnu"
