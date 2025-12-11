@@ -17,8 +17,9 @@ pub use futures;
 pub use tokio;
 
 use std::collections::{BTreeSet, HashMap, HashSet};
-use std::ffi::{OsStr, OsString};
+use std::ffi::OsString;
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use anyhow::Context;
 use futures::{try_join, AsyncRead, AsyncWrite, FutureExt, Stream, TryStreamExt};
@@ -192,7 +193,7 @@ pub async fn untar(
     skip_deps: &HashSet<Identifier>,
     subdir: &str,
 ) -> std::io::Result<HashMap<Identifier, PathBuf>> {
-    use std::io::{Error, Result};
+    use std::io::{Error, ErrorKind, Result};
 
     async fn unpack(e: &mut async_tar::Entry<impl Unpin + AsyncRead>, dst: &Path) -> Result<()> {
         e.unpack(dst).await.map_err(|e| {
@@ -205,80 +206,88 @@ pub async fn untar(
         Ok(())
     }
 
+    // Parse subdir into components for matching against nested paths
+    // Use Arc to avoid cloning for each archive entry
+    let subdir_components: Arc<[String]> = if subdir.is_empty() {
+        Arc::from([])
+    } else {
+        subdir.split('/').map(String::from).collect()
+    };
+    let subdir_len = subdir_components.len();
+
     let dst = dst.as_ref();
     recreate_dir(dst).await?;
     async_tar::Archive::new(tar)
         .entries()
         .map_err(|e| Error::new(e.kind(), format!("failed to unpack archive metadata: {e}")))?
-        .try_fold(HashMap::default(), |mut untared, mut e| async move {
-            let path = e
-                .path()
-                .map_err(|e| Error::new(e.kind(), format!("failed to query entry path: {e}")))?;
-            let mut path = path.into_iter().map(OsStr::to_str);
-            match (
-                path.next(),
-                path.next(),
-                path.next(),
-                path.next(),
-                path.next(),
-            ) {
-                (Some(Some(name)), None, None, None, None)
-                | (Some(_), Some(Some(name)), None, None, None)
-                    if is_wit(name) && subdir.is_empty() =>
-                {
-                    let dst = dst.join(name);
-                    unpack(&mut e, &dst).await?;
-                    Ok(untared)
+        .try_fold(HashMap::default(), |mut untared, mut e| {
+            let subdir_components = subdir_components.clone();
+            async move {
+                let path = e.path().map_err(|e| {
+                    Error::new(e.kind(), format!("failed to query entry path: {e}"))
+                })?;
+                // Collect all path components, skipping the archive root directory
+                // Return an error if any component is not valid UTF-8, as WIT paths must be UTF-8
+                let components: Vec<&str> = path
+                    .iter()
+                    .skip(1) // Skip archive root (e.g., "WASI-0.2.9")
+                    .map(|c| {
+                        c.to_str().ok_or_else(|| {
+                            Error::new(
+                                ErrorKind::InvalidData,
+                                format!("non-UTF-8 path component in archive: {}", path.display()),
+                            )
+                        })
+                    })
+                    .collect::<Result<_>>()?;
+
+                // Check if the path starts with our subdir
+                let matches_subdir = if subdir_components.is_empty() {
+                    true
+                } else {
+                    components.len() >= subdir_len
+                        && components[..subdir_len]
+                            .iter()
+                            .zip(subdir_components.iter())
+                            .all(|(a, b)| *a == b)
+                };
+
+                if !matches_subdir {
+                    return Ok(untared);
                 }
-                (Some(Some(dir)), Some(Some(name)), None, None, None)
-                | (Some(_), Some(Some(dir)), Some(Some(name)), None, None)
-                    if is_wit(name) && dir == subdir =>
-                {
-                    let dst = dst.join(name);
-                    unpack(&mut e, &dst).await?;
-                    Ok(untared)
-                }
-                (Some(Some("deps")), Some(Some(id)), Some(Some(name)), None, None)
-                | (Some(_), Some(Some("deps")), Some(Some(id)), Some(Some(name)), None)
-                    if !skip_deps.contains(id) && is_wit(name) && subdir.is_empty() =>
-                {
-                    let id = Identifier::from(id);
-                    if let Some(base) = dst.parent() {
-                        let dst = base.join(&id);
-                        if !untared.contains_key(&id) {
-                            recreate_dir(&dst).await?;
-                        }
-                        let wit = dst.join(name);
-                        unpack(&mut e, &wit).await?;
-                        untared.insert(id, dst);
-                        Ok(untared)
-                    } else {
-                        Ok(untared)
-                    }
-                }
-                (Some(Some(dir)), Some(Some("deps")), Some(Some(id)), Some(Some(name)), None)
-                | (
-                    Some(_),
-                    Some(Some(dir)),
-                    Some(Some("deps")),
-                    Some(Some(id)),
-                    Some(Some(name)),
-                ) if !skip_deps.contains(id) && is_wit(name) && dir == subdir => {
-                    let id = Identifier::from(id);
-                    if let Some(base) = dst.parent() {
-                        let dst = base.join(&id);
-                        if !untared.contains_key(&id) {
-                            recreate_dir(&dst).await?;
-                        }
-                        let wit = dst.join(name);
-                        unpack(&mut e, &wit).await?;
-                        untared.insert(id, dst);
-                        Ok(untared)
-                    } else {
+
+                // Get the path relative to subdir
+                let relative: Vec<&str> = if subdir_components.is_empty() {
+                    components
+                } else {
+                    components.into_iter().skip(subdir_len).collect()
+                };
+
+                match relative.as_slice() {
+                    // Direct .wit file in subdir
+                    [name] if is_wit(name) => {
+                        let dst = dst.join(name);
+                        unpack(&mut e, &dst).await?;
                         Ok(untared)
                     }
+                    // .wit file in deps/<id>/
+                    ["deps", id, name] if is_wit(name) && !skip_deps.contains(*id) => {
+                        let id = Identifier::from(*id);
+                        if let Some(base) = dst.parent() {
+                            let dst = base.join(&id);
+                            if !untared.contains_key(&id) {
+                                recreate_dir(&dst).await?;
+                            }
+                            let wit = dst.join(name);
+                            unpack(&mut e, &wit).await?;
+                            untared.insert(id, dst);
+                            Ok(untared)
+                        } else {
+                            Ok(untared)
+                        }
+                    }
+                    _ => Ok(untared),
                 }
-                _ => Ok(untared),
             }
         })
         .await

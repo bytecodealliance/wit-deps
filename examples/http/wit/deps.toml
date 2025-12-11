@@ -1,1 +1,12 @@
-http = "https://github.com/WebAssembly/wasi-http/archive/v0.2.3.tar.gz"
+# The wasi-http repo has been archived and merged into the main WASI monorepo.
+# Use the `subdir` feature to point to each proposal's wit directory.
+
+http = { url = "https://github.com/WebAssembly/WASI/archive/v0.2.9.tar.gz", subdir = "proposals/http/wit" }
+
+# http's transitive dependencies from the monorepo
+cli = { url = "https://github.com/WebAssembly/WASI/archive/v0.2.9.tar.gz", subdir = "proposals/cli/wit" }
+clocks = { url = "https://github.com/WebAssembly/WASI/archive/v0.2.9.tar.gz", subdir = "proposals/clocks/wit" }
+filesystem = { url = "https://github.com/WebAssembly/WASI/archive/v0.2.9.tar.gz", subdir = "proposals/filesystem/wit" }
+io = { url = "https://github.com/WebAssembly/WASI/archive/v0.2.9.tar.gz", subdir = "proposals/io/wit" }
+random = { url = "https://github.com/WebAssembly/WASI/archive/v0.2.9.tar.gz", subdir = "proposals/random/wit" }
+sockets = { url = "https://github.com/WebAssembly/WASI/archive/v0.2.9.tar.gz", subdir = "proposals/sockets/wit" }
