@@ -36,8 +36,8 @@ pub enum Entry {
         sha256: Option<[u8; 32]>,
         /// Optional sha512 digest of this resource
         sha512: Option<[u8; 64]>,
-        /// Subdirectory within resource containing WIT, `wit` by default
-        subdir: Box<str>,
+        /// Prefix within resource containing WIT, empty by default
+        prefix: Box<str>,
     },
     /// Dependency specification expressed as a local path to a directory containing WIT
     /// definitions
@@ -51,7 +51,7 @@ impl From<Url> for Entry {
             url,
             sha256: None,
             sha512: None,
-            subdir: "wit".into(),
+            prefix: "".into(),
         }
     }
 }
@@ -78,7 +78,7 @@ impl<'de> Deserialize<'de> for Entry {
     where
         D: serde::Deserializer<'de>,
     {
-        const FIELDS: [&str; 4] = ["path", "sha256", "sha512", "url"];
+        const FIELDS: [&str; 5] = ["path", "sha256", "sha512", "url", "prefix"];
 
         struct Visitor;
         impl<'de> de::Visitor<'de> for Visitor {
@@ -102,7 +102,7 @@ impl<'de> Deserialize<'de> for Entry {
                 let mut path = None;
                 let mut sha256 = None;
                 let mut sha512 = None;
-                let mut subdir: Option<String> = None;
+                let mut prefix: Option<String> = None;
                 let mut url = None;
                 while let Some((k, v)) = map.next_entry::<String, String>()? {
                     match k.as_ref() {
@@ -130,12 +130,12 @@ impl<'de> Deserialize<'de> for Entry {
                                 de::Error::custom(format!("invalid `sha512` field value: {e}"))
                             })?;
                         }
-                        "subdir" => {
-                            if subdir.is_some() {
-                                return Err(de::Error::duplicate_field("subdir"));
+                        "prefix" => {
+                            if prefix.is_some() {
+                                return Err(de::Error::duplicate_field("prefix"));
                             }
-                            subdir = v.parse().map(Some).map_err(|e| {
-                                de::Error::custom(format!("invalid `subdir` field value: {e}"))
+                            prefix = v.parse().map(Some).map_err(|e| {
+                                de::Error::custom(format!("invalid `prefix` field value: {e}"))
                             })?;
                         }
                         "url" => {
@@ -149,23 +149,23 @@ impl<'de> Deserialize<'de> for Entry {
                         k => return Err(de::Error::unknown_field(k, &FIELDS)),
                     }
                 }
-                match (path, sha256, sha512, subdir, url) {
+                match (path, sha256, sha512, prefix, url) {
                     (Some(path), None, None, None, None) => Ok(Entry::Path(path)),
                     (None, sha256, sha512, None, Some(url)) => Ok(Entry::Url {
                         url,
                         sha256,
                         sha512,
-                        subdir: "wit".into(),
+                        prefix: "".into(),
                     }),
-                    (None, sha256, sha512, Some(subdir), Some(url)) => Ok(Entry::Url {
+                    (None, sha256, sha512, Some(prefix), Some(url)) => Ok(Entry::Url {
                         url,
                         sha256,
                         sha512,
-                        subdir: subdir.into_boxed_str(),
+                        prefix: prefix.into_boxed_str(),
                     }),
                     (Some(_), None | Some(_), None | Some(_), None | Some(_), None) => {
                         Err(de::Error::custom(
-                            "`subdir`, `sha256` and `sha512` are not supported in combination with `path`",
+                            "`prefix`, `sha256` and `sha512` are not supported in combination with `path`",
                         ))
                     }
                     _ => Err(de::Error::custom("eiter `url` or `path` must be specified")),
@@ -257,16 +257,16 @@ impl Entry {
                     // TODO: Check that transitive dependencies are in sync
                     match (self, source) {
                         (
-                            Self::Url { url, subdir, .. },
+                            Self::Url { url, prefix, .. },
                             LockEntrySource::Url {
                                 url: lurl,
-                                subdir: lsubdir,
+                                prefix: lprefix,
                             },
-                        ) if url == *lurl && subdir == *lsubdir => {
+                        ) if url == *lurl && prefix == *lprefix => {
                             debug!("`{}` is already up-to-date, skip fetch", out.display());
                             return Ok((
                                 LockEntry::new(
-                                    Some(LockEntrySource::Url { url, subdir }),
+                                    Some(LockEntrySource::Url { url, prefix }),
                                     digest,
                                     deps.keys().cloned().collect(),
                                 ),
@@ -341,7 +341,7 @@ impl Entry {
                 url,
                 sha256,
                 sha512,
-                subdir,
+                prefix,
             } => {
                 let cache = if let Some(cache) = cache {
                     match cache.get(&url).await {
@@ -353,7 +353,7 @@ impl Entry {
                                 GzipDecoder::new(BufReader::new(&mut hashed)),
                                 out,
                                 skip_deps,
-                                &subdir,
+                                &prefix,
                             )
                             .await
                             {
@@ -364,7 +364,7 @@ impl Entry {
                                         url,
                                         out,
                                         deps.keys().cloned().collect(),
-                                        subdir,
+                                        prefix,
                                     )
                                     .await?;
                                     return Ok((entry, deps));
@@ -433,7 +433,7 @@ impl Entry {
                             GzipDecoder::new(BufReader::new(&mut hashed)),
                             out,
                             skip_deps,
-                            &subdir,
+                            &prefix,
                         )
                         .await
                         .with_context(|| format!("failed to unpack contents of `{url}`"))?;
@@ -484,7 +484,7 @@ expected: {}",
                 let deps = lock_deps(deps).await?;
                 trace!(?deps, "locked transitive dependencies of `{url}`");
                 let entry =
-                    LockEntry::from_url(url, out, deps.keys().cloned().collect(), subdir).await?;
+                    LockEntry::from_url(url, out, deps.keys().cloned().collect(), prefix).await?;
                 Ok((entry, deps))
             }
         }
@@ -606,7 +606,7 @@ baz = {{ url = "{BAZ_URL}", sha256 = "{BAZ_SHA256}", sha512 = "{BAZ_SHA512}" }}
                         url: FOO_URL.parse().expect("failed to parse `foo` URL string"),
                         sha256: None,
                         sha512: None,
-                        subdir: "wit".into(),
+                        prefix: "".into(),
                     },
                 ),
                 (
@@ -617,7 +617,7 @@ baz = {{ url = "{BAZ_URL}", sha256 = "{BAZ_SHA256}", sha512 = "{BAZ_SHA512}" }}
                             .map(Some)
                             .expect("failed to decode `bar` sha256"),
                         sha512: None,
-                        subdir: "wit".into(),
+                        prefix: "".into(),
                     }
                 ),
                 (
@@ -630,7 +630,7 @@ baz = {{ url = "{BAZ_URL}", sha256 = "{BAZ_SHA256}", sha512 = "{BAZ_SHA512}" }}
                         sha512: FromHex::from_hex(BAZ_SHA512)
                             .map(Some)
                             .expect("failed to decode `baz` sha512"),
-                        subdir: "wit".into(),
+                        prefix: "".into(),
                     }
                 )
             ])

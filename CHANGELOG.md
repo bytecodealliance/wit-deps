@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Optional `prefix` attribute is now supported by the manifest, which allows specifying a prefix in the archive, from which to extract the WIT definitions.
+  For example, `clocks = { url = "https://github.com/WebAssembly/wasi/archive/main.tar.gz", prefix = "WASI-main/proposals/clocks" }`
+
+### Removed
+
+- `subdir` attribute is no longer supported
+
 ## [0.5.0] - 2025-01-16
 
 ### Added

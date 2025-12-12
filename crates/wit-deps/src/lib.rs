@@ -16,6 +16,8 @@ pub use manifest::{Entry as ManifestEntry, Manifest};
 pub use futures;
 pub use tokio;
 
+use core::array;
+
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::ffi::{OsStr, OsString};
 use std::path::{Path, PathBuf};
@@ -190,7 +192,7 @@ pub async fn untar(
     tar: impl AsyncRead + Unpin,
     dst: impl AsRef<Path>,
     skip_deps: &HashSet<Identifier>,
-    subdir: &str,
+    prefix: &str,
 ) -> std::io::Result<HashMap<Identifier, PathBuf>> {
     use std::io::{Error, Result};
 
@@ -214,56 +216,25 @@ pub async fn untar(
             let path = e
                 .path()
                 .map_err(|e| Error::new(e.kind(), format!("failed to query entry path: {e}")))?;
-            let mut path = path.into_iter().map(OsStr::to_str);
-            match (
-                path.next(),
-                path.next(),
-                path.next(),
-                path.next(),
-                path.next(),
-            ) {
-                (Some(Some(name)), None, None, None, None)
-                | (Some(_), Some(Some(name)), None, None, None)
-                    if is_wit(name) && subdir.is_empty() =>
+            let Ok(path) = path.strip_prefix(prefix) else {
+                return Ok(untared);
+            };
+            let mut path = path.into_iter();
+            match array::from_fn::<_, 6, _>(|_| path.next().and_then(OsStr::to_str)) {
+                [Some(name), None, ..]
+                | [Some("wit"), Some(name), None, ..]
+                | [Some(_), Some("wit"), Some(name), None, ..]
+                    if is_wit(name) =>
                 {
                     let dst = dst.join(name);
                     unpack(&mut e, &dst).await?;
                     Ok(untared)
                 }
-                (Some(Some(dir)), Some(Some(name)), None, None, None)
-                | (Some(_), Some(Some(dir)), Some(Some(name)), None, None)
-                    if is_wit(name) && dir == subdir =>
+                [Some("deps"), Some(id), Some(name), None, ..]
+                | [Some("wit"), Some("deps"), Some(id), Some(name), None, ..]
+                | [Some(_), Some("wit"), Some("deps"), Some(id), Some(name), None]
+                    if !skip_deps.contains(id) && is_wit(name) =>
                 {
-                    let dst = dst.join(name);
-                    unpack(&mut e, &dst).await?;
-                    Ok(untared)
-                }
-                (Some(Some("deps")), Some(Some(id)), Some(Some(name)), None, None)
-                | (Some(_), Some(Some("deps")), Some(Some(id)), Some(Some(name)), None)
-                    if !skip_deps.contains(id) && is_wit(name) && subdir.is_empty() =>
-                {
-                    let id = Identifier::from(id);
-                    if let Some(base) = dst.parent() {
-                        let dst = base.join(&id);
-                        if !untared.contains_key(&id) {
-                            recreate_dir(&dst).await?;
-                        }
-                        let wit = dst.join(name);
-                        unpack(&mut e, &wit).await?;
-                        untared.insert(id, dst);
-                        Ok(untared)
-                    } else {
-                        Ok(untared)
-                    }
-                }
-                (Some(Some(dir)), Some(Some("deps")), Some(Some(id)), Some(Some(name)), None)
-                | (
-                    Some(_),
-                    Some(Some(dir)),
-                    Some(Some("deps")),
-                    Some(Some(id)),
-                    Some(Some(name)),
-                ) if !skip_deps.contains(id) && is_wit(name) && dir == subdir => {
                     let id = Identifier::from(id);
                     if let Some(base) = dst.parent() {
                         let dst = base.join(&id);

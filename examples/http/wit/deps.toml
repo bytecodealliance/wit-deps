@@ -1,1 +1,7 @@
-http = "https://github.com/WebAssembly/wasi-http/archive/v0.2.3.tar.gz"
+cli = { url = "https://github.com/WebAssembly/wasi/archive/main.tar.gz", prefix = "WASI-main/proposals/cli" }
+clocks = { url = "https://github.com/WebAssembly/wasi/archive/main.tar.gz", prefix = "WASI-main/proposals/clocks" }
+filesystem = { url = "https://github.com/WebAssembly/wasi/archive/main.tar.gz", prefix = "WASI-main/proposals/filesystem" }
+http = { url = "https://github.com/WebAssembly/wasi/archive/main.tar.gz", prefix = "WASI-main/proposals/http" }
+io = { url = "https://github.com/WebAssembly/wasi/archive/main.tar.gz", prefix = "WASI-main/proposals/io" }
+random = { url = "https://github.com/WebAssembly/wasi/archive/main.tar.gz", prefix = "WASI-main/proposals/random" }
+sockets = { url = "https://github.com/WebAssembly/wasi/archive/main.tar.gz", prefix = "WASI-main/proposals/sockets" }
