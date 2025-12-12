@@ -1,5 +1,5 @@
 package examples:http;
 
 world http {
-    import wasi:http/incoming-handler@0.2.3;
+    import wasi:http/incoming-handler@0.2.9;
 }

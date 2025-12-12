@@ -10,14 +10,6 @@ use futures::io::sink;
 use serde::{Deserialize, Serialize};
 use url::Url;
 
-fn default_subdir() -> Box<str> {
-    "wit".into()
-}
-
-fn is_default_subdir(s: &str) -> bool {
-    s == "wit"
-}
-
 /// Source of this dependency
 #[derive(Clone, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
 #[serde(untagged)]
@@ -26,9 +18,9 @@ pub enum EntrySource {
     Url {
         /// URL
         url: Url,
-        /// Subdirectory containing WIT definitions within the tarball
-        #[serde(default = "default_subdir", skip_serializing_if = "is_default_subdir")]
-        subdir: Box<str>,
+        /// Prefix containing WIT definitions within the tarball
+        #[serde(default, skip_serializing_if = "str::is_empty")]
+        prefix: Box<str>,
     },
     /// Local path
     Path {
@@ -71,7 +63,7 @@ impl Entry {
         url: Url,
         path: impl AsRef<Path>,
         deps: BTreeSet<Identifier>,
-        subdir: impl Into<Box<str>>,
+        prefix: impl Into<Box<str>>,
     ) -> anyhow::Result<Self> {
         let digest = Self::digest(path)
             .await
@@ -79,7 +71,7 @@ impl Entry {
         Ok(Self::new(
             Some(EntrySource::Url {
                 url,
-                subdir: subdir.into(),
+                prefix: prefix.into(),
             }),
             digest,
             deps,
@@ -184,7 +176,7 @@ mod tests {
                     Entry {
                         source: Some(EntrySource::Url {
                             url: FOO_URL.parse().expect("failed to parse `foo` URL"),
-                            subdir: "wit".into(),
+                            prefix: "".into(),
                         }),
                         digest: Digest {
                             sha256: FromHex::from_hex(FOO_SHA256)
