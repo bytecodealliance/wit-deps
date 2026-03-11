@@ -44,7 +44,7 @@ jobs:
           install-path: /bin/wit-deps.exe
           test-bin: |
             nix profile install --inputs-from . 'nixpkgs-unstable#wine64'
-            wine64 ./result/bin/wit-deps.exe --version
+            wine ./result/bin/wit-deps.exe --version
           test-oci: docker load < ./result
           # TODO: Run windows binary within OCI
 
