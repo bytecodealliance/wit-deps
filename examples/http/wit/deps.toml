@@ -1,7 +1,7 @@
-cli = { url = "https://github.com/WebAssembly/wasi/archive/main.tar.gz", prefix = "WASI-main/proposals/cli" }
-clocks = { url = "https://github.com/WebAssembly/wasi/archive/main.tar.gz", prefix = "WASI-main/proposals/clocks" }
-filesystem = { url = "https://github.com/WebAssembly/wasi/archive/main.tar.gz", prefix = "WASI-main/proposals/filesystem" }
-http = { url = "https://github.com/WebAssembly/wasi/archive/main.tar.gz", prefix = "WASI-main/proposals/http" }
-io = { url = "https://github.com/WebAssembly/wasi/archive/main.tar.gz", prefix = "WASI-main/proposals/io" }
-random = { url = "https://github.com/WebAssembly/wasi/archive/main.tar.gz", prefix = "WASI-main/proposals/random" }
-sockets = { url = "https://github.com/WebAssembly/wasi/archive/main.tar.gz", prefix = "WASI-main/proposals/sockets" }
+cli = { url = "https://github.com/WebAssembly/WASI/releases/download/v0.2.10/wasi-wit-0.2.10.tar.gz", prefix = "wasi-wit-0.2.10/cli" }
+clocks = { url = "https://github.com/WebAssembly/WASI/releases/download/v0.2.10/wasi-wit-0.2.10.tar.gz", prefix = "wasi-wit-0.2.10/clocks" }
+filesystem = { url = "https://github.com/WebAssembly/WASI/releases/download/v0.2.10/wasi-wit-0.2.10.tar.gz", prefix = "wasi-wit-0.2.10/filesystem" }
+http = { url = "https://github.com/WebAssembly/WASI/releases/download/v0.2.10/wasi-wit-0.2.10.tar.gz", prefix = "wasi-wit-0.2.10/http" }
+io = { url = "https://github.com/WebAssembly/WASI/releases/download/v0.2.10/wasi-wit-0.2.10.tar.gz", prefix = "wasi-wit-0.2.10/io" }
+random = { url = "https://github.com/WebAssembly/WASI/releases/download/v0.2.10/wasi-wit-0.2.10.tar.gz", prefix = "wasi-wit-0.2.10/random" }
+sockets = { url = "https://github.com/WebAssembly/WASI/releases/download/v0.2.10/wasi-wit-0.2.10.tar.gz", prefix = "wasi-wit-0.2.10/sockets" }

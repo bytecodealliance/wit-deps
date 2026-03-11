@@ -1,41 +1,41 @@
 [cli]
-url = "https://github.com/WebAssembly/wasi/archive/main.tar.gz"
-prefix = "WASI-main/proposals/cli"
-sha256 = "352a505de5c9236597b483a7b407e855ce60b7c68da38ad79f3fdd8dae89f552"
-sha512 = "afd75448f8aa523c514faa919759357ee972b32dca59c828b0654b7978d2ea06ddab00576288e30e76717a3019dbe40a6cc0a19d399f4d292893d9d9acfdd791"
+url = "https://github.com/WebAssembly/WASI/releases/download/v0.2.10/wasi-wit-0.2.10.tar.gz"
+prefix = "wasi-wit-0.2.10/cli"
+sha256 = "d05dd455b39a3c62e562919440216f1f0573620f3ed8fca907068931446c8b6f"
+sha512 = "e45b07ae44c06039e8e5863422dd8975449d39950d51cd2124f67cba309f20cfd8bf3be676c1b44487459cab3fcab0e12fa6eba918ef7d1a3c2734e1c62fad77"
 
 [clocks]
-url = "https://github.com/WebAssembly/wasi/archive/main.tar.gz"
-prefix = "WASI-main/proposals/clocks"
-sha256 = "b9fe6015a69eec7ce906a2fe9e6422e09d84e5905f8b2c48c9f9db4932ae6336"
-sha512 = "fc16682461807392565b7f7a3bc01d233e794a8dd82bd5de9263e608c96cc3aa754d0f5d1e9c1573faece8c7ffd3a87b7290bbcdf6d515478c5bcf1b0cb9e5c7"
+url = "https://github.com/WebAssembly/WASI/releases/download/v0.2.10/wasi-wit-0.2.10.tar.gz"
+prefix = "wasi-wit-0.2.10/clocks"
+sha256 = "f66f40b70e256da4f0054be4c60a7637250223852882d54923ed23fe45adb3ef"
+sha512 = "1bd3ae2f63167aa91fee223fd31435eccc8b4bf28804690126dce6b305a42ea76cf94f1b0249d7a8ce65d301fc0a749d1b0e87d7bd85ef2c67f4baaee38e44c3"
 
 [filesystem]
-url = "https://github.com/WebAssembly/wasi/archive/main.tar.gz"
-prefix = "WASI-main/proposals/filesystem"
-sha256 = "840d7b3c0a3cac44f90fbc875f9772788220cbfd63881570b504b614087d2f76"
-sha512 = "c9266a095e4a0f6cc4e071d7da54ae88d9c70128681fd66fdf5ee626f35636db8afbabdb73ce2b28959e107c750abbc014aec29423e7363614a180d3c9075776"
+url = "https://github.com/WebAssembly/WASI/releases/download/v0.2.10/wasi-wit-0.2.10.tar.gz"
+prefix = "wasi-wit-0.2.10/filesystem"
+sha256 = "33b6ac25ec871c163812a420cf7a9ecd364884ca8f1ed6ee21248240fd46eb5d"
+sha512 = "821773c1b124165159035b36e95c571e58cffbea3b627d35d23ebaf0115d679ab595847d4ea84b2d9711e61c54a18072c4c6a8a086dad88072e22a325462524d"
 
 [http]
-url = "https://github.com/WebAssembly/wasi/archive/main.tar.gz"
-prefix = "WASI-main/proposals/http"
-sha256 = "1c1b91e1b93fa5f778134ddf84c6e565048792ea4269390de3547aebdc00ef1b"
-sha512 = "acec6e36a3057b4d0a12905681feafc064169a6cf7da0bc50e71ae9c708e1ac1ddc23f787cd7d3ff3406e02ce18209d6c7208e37a581694621ab74a1222a531f"
+url = "https://github.com/WebAssembly/WASI/releases/download/v0.2.10/wasi-wit-0.2.10.tar.gz"
+prefix = "wasi-wit-0.2.10/http"
+sha256 = "94cb5422d8becbb9280eb848b08cc60564df37192c5633017f96a58fc963e825"
+sha512 = "69365f69d856896ca131b96338483dbf371e86e17b8cff87ba35eec17c0c0c183e290c152a40f6809ab6ad13e884f939fbfff85b33e864b9cd50e89266ac3140"
 
 [io]
-url = "https://github.com/WebAssembly/wasi/archive/main.tar.gz"
-prefix = "WASI-main/proposals/io"
-sha256 = "3699f94c981bacfd4034e92d47d0c888befb9297c54f6082bd37e83c86e5796e"
-sha512 = "fd3fdd9d6b0df1ee8846aaaba469942e110c6ffc935d331651e338ff9c75b453748d626fffeee9a6026f1ed90d94d8854887e209c5832acc26da6385d189db6b"
+url = "https://github.com/WebAssembly/WASI/releases/download/v0.2.10/wasi-wit-0.2.10.tar.gz"
+prefix = "wasi-wit-0.2.10/io"
+sha256 = "c5084b560473c21f79ea2afed03993df3e753980bbf0960b580623c9d9c307da"
+sha512 = "ba90dae029e1f6da446962607431c71b3f32cbb8e392fcb63b017e69d41f45508edfb56bd1038a9a309da93789a84853edbc4eb5202b06b59c2da17e413266be"
 
 [random]
-url = "https://github.com/WebAssembly/wasi/archive/main.tar.gz"
-prefix = "WASI-main/proposals/random"
-sha256 = "4b4ea94130dba45cc9a86eea05778d9d456cfa8c32a568ef92e8525e2300e233"
-sha512 = "141e730abe6d167bfa675d184ea9601f33e0beb2104ed3312b1f0d7239f7e80d5c5eab3b8b926fc9ac5f959ae479245aa4af56c74babfad3d6208951a5b2650b"
+url = "https://github.com/WebAssembly/WASI/releases/download/v0.2.10/wasi-wit-0.2.10.tar.gz"
+prefix = "wasi-wit-0.2.10/random"
+sha256 = "02eb1e6ec30939535d9583a98a35837928d86131f6c7866ee84f102772913e85"
+sha512 = "6ecaa5eb3a927aa4e05818e2da0db996402c46a908c8c54eaa159f39ac8cbe0bdd46771ba851b36217fd876455d569eb3793fe80d33077015c1f66e37e8b65d9"
 
 [sockets]
-url = "https://github.com/WebAssembly/wasi/archive/main.tar.gz"
-prefix = "WASI-main/proposals/sockets"
-sha256 = "996840e548a6fddda8ef47863926a7fa86179be5aa8a81edadb2ea9a2dc526c8"
-sha512 = "0698ec81c26ea76939029fc53104c16bd68a1e1a5144863ce041bee0b5a8a0ed31bfa921118e45d262c1d4e882f8014a8aeacc31825b8c0b7d54d5a1c2c51e97"
+url = "https://github.com/WebAssembly/WASI/releases/download/v0.2.10/wasi-wit-0.2.10.tar.gz"
+prefix = "wasi-wit-0.2.10/sockets"
+sha256 = "516f54669a615cc5ee41d840446182929efc61d9673ba9afff979a241e3bf87c"
+sha512 = "d1ec6c12ae8cdf45b8ff9c6bc0c8a010e372f5e78ab1baf6e6931be8bd1565e69e6d93a5213c524b0bdb3a9430b305d95d1fa748a7ab56b60c2ac77292f1b28a"
