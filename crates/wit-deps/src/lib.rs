@@ -220,7 +220,7 @@ pub async fn untar(
             let Ok(path) = path.strip_prefix(prefix) else {
                 return Ok(untared);
             };
-            let mut path = path.into_iter();
+            let mut path = path.iter();
             match array::from_fn::<_, 6, _>(|_| path.next().and_then(OsStr::to_str)) {
                 [Some(name), None, ..]
                 | [Some("wit"), Some(name), None, ..]
