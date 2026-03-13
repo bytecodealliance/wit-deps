@@ -269,10 +269,19 @@ where
     let path = path.as_ref();
     let mut tar = async_tar::Builder::new(dst);
     tar.mode(async_tar::HeaderMode::Deterministic);
-    for name in read_wits(path).await?.try_collect::<BTreeSet<_>>().await? {
-        tar.append_path_with_name(path.join(&name), Path::new("wit").join(name))
-            .await?;
+    let res = async {
+        for name in read_wits(path).await?.try_collect::<BTreeSet<_>>().await? {
+            tar.append_path_with_name(path.join(&name), Path::new("wit").join(name))
+                .await?;
+        }
+        std::io::Result::Ok(())
     }
+    .await;
+    if res.is_err() {
+        // Finalize the builder to avoid a panic on drop.
+        let _ = tar.finish().await;
+    }
+    res?;
     tar.into_inner().await
 }
 
