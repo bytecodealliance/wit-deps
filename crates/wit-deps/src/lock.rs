@@ -6,8 +6,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
 use anyhow::Context;
-use futures::io::sink;
 use serde::{Deserialize, Serialize};
+use tokio::io::sink;
 use url::Url;
 
 /// Source of this dependency

@@ -7,9 +7,8 @@ use std::path::{Path, PathBuf};
 use anyhow::{bail, Context as _};
 use async_trait::async_trait;
 use directories::ProjectDirs;
-use futures::{io::BufReader, AsyncBufRead, AsyncWrite};
 use tokio::fs::{self, File, OpenOptions};
-use tokio_util::compat::{Compat, TokioAsyncReadCompatExt};
+use tokio::io::{AsyncBufRead, AsyncWrite, BufReader};
 use url::{Host, Url};
 
 /// Resource caching layer
@@ -130,12 +129,12 @@ impl Local {
 
 #[async_trait]
 impl Cache for Local {
-    type Read = BufReader<Compat<File>>;
-    type Write = Compat<File>;
+    type Read = BufReader<File>;
+    type Write = File;
 
     async fn get(&self, url: &Url) -> anyhow::Result<Option<Self::Read>> {
         match File::open(self.path(url)).await {
-            Ok(file) => Ok(Some(BufReader::new(file.compat()))),
+            Ok(file) => Ok(Some(BufReader::new(file))),
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
             Err(e) => bail!("failed to lookup `{url}` in cache: {e}"),
         }
@@ -153,7 +152,6 @@ impl Cache for Local {
             .write(true)
             .open(path)
             .await
-            .map(tokio_util::compat::TokioAsyncReadCompatExt::compat)
             .context("failed to open file for writing")
     }
 }

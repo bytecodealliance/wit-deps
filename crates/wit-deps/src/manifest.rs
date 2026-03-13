@@ -16,12 +16,12 @@ use std::sync::Arc;
 
 use anyhow::ensure;
 use anyhow::{bail, Context as _};
-use async_compression::futures::bufread::GzipDecoder;
-use futures::io::BufReader;
-use futures::lock::Mutex;
-use futures::{stream, AsyncWriteExt, StreamExt, TryStreamExt};
+use async_compression::tokio::bufread::GzipDecoder;
+use futures::{stream, StreamExt, TryStreamExt};
 use hex::FromHex;
 use serde::{de, Deserialize};
+use tokio::io::{AsyncWriteExt, BufReader};
+use tokio::sync::Mutex;
 use tracing::{debug, error, info, instrument, trace, warn};
 use url::Url;
 
@@ -400,34 +400,34 @@ impl Entry {
                             .error_for_status()
                             .context("GET request failed")
                             .map_err(std::io::Error::other)?;
-                        let tar_gz = res
-                            .bytes_stream()
-                            .map_err(std::io::Error::other)
-                            .then(|chunk| async {
-                                let chunk = chunk?;
-                                let mut cache = cache.lock().await;
-                                let cache_res = if let Some(w) = cache.as_mut().map(|w| async {
-                                    if let Err(e) = w.write(&chunk).await {
-                                        error!("failed to write chunk to cache: {e}");
-                                        if let Err(e) = w.close().await {
-                                            error!("failed to close cache writer: {e}");
+                        let tar_gz =
+                            res.bytes_stream()
+                                .map_err(std::io::Error::other)
+                                .then(|chunk| async {
+                                    let chunk = chunk?;
+                                    let mut cache = cache.lock().await;
+                                    let cache_res = if let Some(w) = cache.as_mut().map(|w| async {
+                                        if let Err(e) = w.write(&chunk).await {
+                                            error!("failed to write chunk to cache: {e}");
+                                            if let Err(e) = w.shutdown().await {
+                                                error!("failed to close cache writer: {e}");
+                                            }
+                                            return Err(e);
                                         }
-                                        return Err(e);
+                                        Ok(())
+                                    }) {
+                                        Some(w.await)
+                                    } else {
+                                        None
                                     }
-                                    Ok(())
-                                }) {
-                                    Some(w.await)
-                                } else {
-                                    None
-                                }
-                                .transpose();
-                                if cache_res.is_err() {
-                                    // Drop the cache writer if a failure occurs
-                                    cache.take();
-                                }
-                                Ok(chunk)
-                            })
-                            .into_async_read();
+                                    .transpose();
+                                    if cache_res.is_err() {
+                                        // Drop the cache writer if a failure occurs
+                                        cache.take();
+                                    }
+                                    Ok::<_, std::io::Error>(chunk)
+                                });
+                        let tar_gz = tokio_util::io::StreamReader::new(tar_gz);
                         let mut hashed = DigestReader::from(Box::pin(tar_gz));
                         let deps = untar(
                             GzipDecoder::new(BufReader::new(&mut hashed)),

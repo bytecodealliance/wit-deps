@@ -2,11 +2,11 @@ use core::fmt;
 use core::pin::Pin;
 use core::task::{Context, Poll};
 
-use futures::{AsyncRead, AsyncWrite};
 use hex::FromHex;
 use serde::ser::SerializeStruct;
 use serde::{de, Deserialize, Serialize};
 use sha2::{Digest as _, Sha256, Sha512};
+use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 
 /// A resource digest
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -91,13 +91,18 @@ impl<T: AsyncRead + Unpin> AsyncRead for Reader<T> {
     fn poll_read(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-        buf: &mut [u8],
-    ) -> Poll<std::io::Result<usize>> {
-        Pin::new(&mut self.inner).poll_read(cx, buf).map_ok(|n| {
-            self.sha256.update(&buf[..n]);
-            self.sha512.update(&buf[..n]);
-            n
-        })
+        buf: &mut ReadBuf<'_>,
+    ) -> Poll<std::io::Result<()>> {
+        let n = buf.filled().len();
+        match Pin::new(&mut self.inner).poll_read(cx, buf) {
+            Poll::Ready(Ok(())) => {
+                let buf = buf.filled();
+                self.sha256.update(&buf[n..]);
+                self.sha512.update(&buf[n..]);
+                Poll::Ready(Ok(()))
+            }
+            other => other,
+        }
     }
 }
 
@@ -143,8 +148,8 @@ impl<T: AsyncWrite + Unpin> AsyncWrite for Writer<T> {
         Pin::new(&mut self.inner).poll_flush(cx)
     }
 
-    fn poll_close(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
-        Pin::new(&mut self.inner).poll_close(cx)
+    fn poll_shutdown(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
+        Pin::new(&mut self.inner).poll_shutdown(cx)
     }
 }
 

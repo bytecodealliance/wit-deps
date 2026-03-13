@@ -23,8 +23,9 @@ use std::ffi::{OsStr, OsString};
 use std::path::{Path, PathBuf};
 
 use anyhow::Context;
-use futures::{try_join, AsyncRead, AsyncWrite, FutureExt, Stream, TryStreamExt};
+use futures::{try_join, FutureExt, Stream, TryStreamExt};
 use tokio::fs;
+use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_stream::wrappers::ReadDirStream;
 use tracing::{debug, instrument, trace};
 
@@ -197,7 +198,7 @@ pub async fn untar(
     use std::io::{Error, Result};
 
     async fn unpack(e: &mut async_tar::Entry<impl Unpin + AsyncRead>, dst: &Path) -> Result<()> {
-        e.unpack(dst).await.map_err(|e| {
+        e.unpack(dst).await.map_err(|e: Error| {
             Error::new(
                 e.kind(),
                 format!("failed to unpack `{}`: {e}", dst.display()),
