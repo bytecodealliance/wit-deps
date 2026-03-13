@@ -7,7 +7,6 @@ use anyhow::Context;
 use clap::{Parser, Subcommand};
 use tokio::fs::File;
 use tokio::io;
-use tokio_util::compat::TokioAsyncWriteCompatExt;
 use tracing_subscriber::prelude::*;
 use wit_deps::Identifier;
 
@@ -101,9 +100,9 @@ async fn main() -> anyhow::Result<ExitCode> {
                 let output = File::create(&output).await.with_context(|| {
                     format!("failed to create output path `{}`", output.display())
                 })?;
-                wit_deps::tar(package, output.compat_write()).await?;
+                wit_deps::tar(package, output).await?;
             } else {
-                wit_deps::tar(package, io::stdout().compat_write()).await?;
+                wit_deps::tar(package, io::stdout()).await?;
             }
             Ok(ExitCode::SUCCESS)
         }

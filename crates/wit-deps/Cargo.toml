@@ -12,8 +12,8 @@ repository.workspace = true
 
 [dependencies]
 anyhow = { workspace = true, features = ["std"] }
-async-compression = { workspace = true, features = ["futures-io", "gzip"] }
-async-tar = { workspace = true }
+async-compression = { workspace = true, features = ["tokio", "gzip"] }
+async-tar = { workspace = true, features = ["runtime-tokio"] }
 async-trait = { workspace = true }
 directories = { workspace = true }
 futures = { workspace = true, features = ["async-await", "std"] }
@@ -21,9 +21,9 @@ hex = { workspace = true, features = ["alloc"] }
 reqwest = { workspace = true, features = ["rustls-tls", "stream"] }
 serde = { workspace = true, features = ["derive"] }
 sha2 = { workspace = true }
-tokio = { workspace = true, features = ["fs"] }
+tokio = { workspace = true, features = ["fs", "io-util", "sync"] }
 tokio-stream = { workspace = true, features = ["fs"] }
-tokio-util = { workspace = true, features = ["compat"] }
+tokio-util = { workspace = true, features = ["io"] }
 toml = { workspace = true, features = ["display", "parse", "preserve_order"] }
 tracing = { workspace = true, features = ["attributes"] }
 url = { workspace = true, features = ["serde"] }
