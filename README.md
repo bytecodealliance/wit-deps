@@ -2,6 +2,20 @@
 
 `wit-deps` is a simple WIT dependency manager binary and Rust library, which manages your `wit/deps`. It's main objective is to ensure that whatever is located in your `wit/deps` is consistent with your dependency manifest (default: `wit/deps.toml`) and dependency lock (default: `wit/deps.lock`).
 
+# Installation
+
+Install the command-line tool with Cargo:
+
+```sh
+cargo install wit-deps-cli
+```
+
+After installation, run:
+
+```sh
+wit-deps --help
+```
+
 # Manifest
 
 A dependency manifest is a TOML-encoded table mapping dependency names to their source specifications. In it's simplest form, a source specification is a URL string of a gzipped tarball containing a directory tree with a `wit` subdirectory containing `wit` files.
