@@ -159,7 +159,6 @@
           "CODE_OF_CONDUCT.md"
           "flake.lock"
           "flake.nix"
-          "garnix.yaml"
           "LICENSE"
           "ORG_CODE_OF_CONDUCT.md"
           "README.md"
