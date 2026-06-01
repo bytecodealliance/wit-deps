@@ -161,9 +161,12 @@
           "README.md"
         ];
 
-        targets.wasm32-unknown-unknown = false;
-        targets.wasm32-wasip1 = false;
-        targets.wasm32-wasip2 = false;
+        targets.aarch64-apple-darwin = true;
+        targets.aarch64-unknown-linux-musl = true;
+        targets.armv7-unknown-linux-musleabihf = true;
+        targets.x86_64-apple-darwin = true;
+        targets.x86_64-pc-windows-gnu = true;
+        targets.x86_64-unknown-linux-musl = true;
 
         clippy.allTargets = true;
         clippy.deny = ["warnings"];
